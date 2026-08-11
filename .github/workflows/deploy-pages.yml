@@ -1,0 +1,96 @@
+# Builds the site and publishes it to the Pages repository.
+#
+# The site is served from a separate repository — bachi-editor.github.io, whose
+# Pages source is branch `main` at `/`. That is what puts the app at the domain
+# root (https://bachi-editor.github.io/). Publishing therefore means pushing the
+# build output to that repository, not deploying Pages from this one; a Pages
+# site enabled here would live at /bachi-editor/ instead.
+#
+# This replaces the deploy_github_pages job in the GitLab project's
+# .gitlab-ci.yml. Disable that job before enabling this one — see README.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never let two publishes interleave in the Pages repository. Queue instead of
+# cancelling: a superseded run has already been merged into the branch history.
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The release gates. The suite skips its corpus-backed suites here — the
+      # game dumps, AES keys, and G.719 modules are deliberately absent from CI.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+          # dist/.nojekyll is dropped without this, and Pages would then run the
+          # output through Jekyll.
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://bachi-editor.github.io/
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to the Pages repository
+        env:
+          PAGES_TOKEN: ${{ secrets.PAGES_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$PAGES_TOKEN" ]; then
+            echo "PAGES_DEPLOY_TOKEN is not set. See README > Deployment." >&2
+            exit 1
+          fi
+          test -f dist/index.html || { echo "build output is missing index.html" >&2; exit 1; }
+
+          git config --global user.name "bachi-editor-ci"
+          git config --global user.email "bachi-editor@users.noreply.github.com"
+          git clone --depth 1 \
+            "https://x-access-token:${PAGES_TOKEN}@github.com/bachi-editor/bachi-editor.github.io.git" pages
+
+          cd pages
+          # The published site is exactly the build output: drop what is tracked,
+          # then lay the fresh dist down over it so removals propagate.
+          git rm -r --quiet --ignore-unmatch .
+          cp -R ../dist/. .
+          git add --all
+
+          if git diff --cached --quiet; then
+            echo "No website changes to deploy."
+            exit 0
+          fi
+
+          git commit -m "Deploy ${GITHUB_REPOSITORY#*/}@${GITHUB_SHA:0:7}"
+          git push origin HEAD:main

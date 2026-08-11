@@ -65,6 +65,30 @@ cp .env.example .env
 it. A malformed key fails the run rather than skipping, so typos surface.
 Proprietary codec binaries go in `vendor/g719/` — see `vendor/README.md`.
 
+## Deployment
+
+`.github/workflows/deploy-pages.yml` runs the release gates on every push to
+`main` and publishes the build.
+
+The site is served from a **separate repository**, `bachi-editor.github.io`,
+whose Pages source is branch `main` at `/`. That is what serves the app from the
+domain root. Publishing therefore pushes `dist/` to that repository rather than
+deploying Pages from this one — a Pages site enabled here would live at
+`/bachi-editor/` instead. The published branch is exactly the build output:
+tracked files are dropped and replaced each run, so removals propagate.
+
+Deploying cross-repo needs a token, since the built-in `GITHUB_TOKEN` cannot
+write to another repository. One-time setup:
+
+1. Create a fine-grained personal access token scoped to
+   `bachi-editor/bachi-editor.github.io` with **Contents: Read and write**.
+2. Add it to this repository as the secret `PAGES_DEPLOY_TOKEN`
+   (Settings → Secrets and variables → Actions).
+
+The deploy job fails with a pointer to this section if the secret is missing.
+Runs are serialized on a `github-pages` concurrency group and queue rather than
+cancel, so a slow deploy cannot be overtaken by a newer one.
+
 ## Manage version and changelog information
 
 The About dialog reads the current version from `package.json` and the dated
