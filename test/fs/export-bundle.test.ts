@@ -5,7 +5,8 @@ import type { RawDatatables } from '../../src/fs/datatables';
 import type { ProjectRoot } from '../../src/fs/project';
 import { sealDatatable } from '../../src/fs/write';
 import { decodeJsonPayload, openEnvelope } from '../../src/codec';
-import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const decoder = new TextDecoder();
 const KEYS = { datatable: DATATABLE_KEY_HEX, fumen: FUMEN_KEY_HEX };
@@ -52,7 +53,7 @@ async function decodeBin<T>(bytes: Uint8Array): Promise<T> {
 }
 
 describe('buildServerBundle', () => {
-  test('zips draft datatable bins, json siblings, and a README', async () => {
+  test.skipIf(!HAS_KEYS)('zips draft datatable bins, json siblings, and a README', async () => {
     const draft = tables();
     // A project with keys but no readable neiro.bin (empty datatable dir).
     const root = { datatable: new MemDir(new Map()), keys: KEYS } as unknown as ProjectRoot;
@@ -80,7 +81,7 @@ describe('buildServerBundle', () => {
     expect(decoder.decode(zip['README.txt'])).toContain('current in-memory Bachi draft');
   });
 
-  test('passes through neiro when the project has a readable datatable', async () => {
+  test.skipIf(!HAS_CORPUS)('passes through neiro when the project has a readable datatable', async () => {
     const draft = tables();
     const neiro = { items: [{ uniqueId: 8, id: 'don' }] };
     const datatable = new MemDir(new Map([

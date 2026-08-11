@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runDecodeJob } from '../../src/audio/decodeJob';
 import { loadTestG719Wasm } from '../helpers/g719';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
@@ -12,7 +13,7 @@ async function loadBytes(name: string): Promise<Uint8Array> {
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
 }
 
-describe('runDecodeJob', () => {
+describe.skipIf(!HAS_CORPUS)('runDecodeJob', () => {
   test('returns planar PCM plus a waveform envelope in one pass', async () => {
     const bytes = await loadBytes('song_kumatm.nus3bank');
     // 5s spans the ~1.4s silent intro plus real signal (mirrors the BNSF test).

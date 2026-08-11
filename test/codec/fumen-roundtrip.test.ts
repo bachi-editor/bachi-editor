@@ -6,6 +6,7 @@ import { encodeFumen } from '../../src/codec/fumen/encode';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
 import { DUMPS, walkBins } from '../helpers/dumps';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -26,7 +27,7 @@ function hex(bytes: Uint8Array, start: number, len: number): string {
   return [...bytes.slice(start, start + len)].map((b) => b.toString(16).padStart(2, '0')).join(' ');
 }
 
-describe('fumen structural decode/encode', () => {
+describe.skipIf(!HAS_CORPUS)('fumen structural decode/encode', () => {
   test('decodes 10binz_e.bin into a plausible structure', async () => {
     const payload = await decryptedPayload(resolve(FUMEN_DIR, '10binz/10binz_e.bin'));
     const fumen = decodeFumen(payload);

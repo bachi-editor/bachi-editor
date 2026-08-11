@@ -9,6 +9,7 @@ import { measureTimings } from '../../src/model/fumenTiming';
 import { convertTjaForImport, decodeTjaBytes, shinutiPatch } from '../../src/model/tjaImport';
 import { SHINUCHI_ABSENT } from '../../src/model/shinuchi';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const ESE_TJA = resolve(REPO, 'resources/ese/01 Pop/365 Nichi no Kamihikouki/365 Nichi no Kamihikouki.tja');
@@ -34,7 +35,7 @@ function routeNotes(fumen: Fumen) {
     })));
 }
 
-describe('TJA cross-examination against an overlapping official song', () => {
+describe.skipIf(!HAS_CORPUS)('TJA cross-examination against an overlapping official song', () => {
   test('matches chart structure and relative note timing across all four courses', async () => {
     const imported = convertTjaForImport(decodeTjaBytes(await readFile(ESE_TJA)));
     const charts = imported.charts.filter((chart) => chart.slot.player === 'single');

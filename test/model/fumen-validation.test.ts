@@ -13,6 +13,7 @@ import type { Fumen, FumenBranch, FumenMeasure, FumenNote } from '../../src/code
 import type { FumenSlot } from '../../src/fs/fumens';
 import { fumenKey, type FumenBaseline } from '../../src/model/fumenDrafts';
 import { validateDirtyFumens, validateFumenChart } from '../../src/model/fumenValidation';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -55,7 +56,7 @@ const LABEL = 'fumen/test/test_m.bin';
 const errorsOf = (issues: { level: string }[]) => issues.filter((i) => i.level === 'error');
 
 describe('validateFumenChart', () => {
-  test('a real corpus chart has no errors', async () => {
+  test.skipIf(!HAS_CORPUS)('a real corpus chart has no errors', async () => {
     const f = await loadChart('10binz/10binz_n.bin');
     expect(errorsOf(validateFumenChart(LABEL, f))).toHaveLength(0);
   });
@@ -132,7 +133,7 @@ describe('validateFumenChart', () => {
   });
 });
 
-describe('validateDirtyFumens', () => {
+describe.skipIf(!HAS_CORPUS)('validateDirtyFumens', () => {
   const SLOT: FumenSlot = { filename: 'test_m.bin', difficulty: 'oni', player: 'single' };
   const KEY = fumenKey('test', SLOT.filename);
 

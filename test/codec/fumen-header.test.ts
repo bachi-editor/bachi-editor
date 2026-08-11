@@ -16,6 +16,7 @@ import {
 import { FUMEN_HEADER_SIZE, FUMEN_TIMING_WINDOW_COUNT } from '../../src/codec/fumen/types';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -63,7 +64,7 @@ describe('Phase 8.4 — typed fumen header', () => {
     expect(() => decodeHeader(new Uint8Array(FUMEN_HEADER_SIZE - 1))).toThrow(/too small/);
   });
 
-  test('every corpus header round-trips byte-perfect and maps cleanly', async () => {
+  test.skipIf(!HAS_CORPUS)('every corpus header round-trips byte-perfect and maps cleanly', async () => {
     const all: string[] = [];
     for await (const p of walkBins(FUMEN_DIR)) all.push(p);
     all.sort();

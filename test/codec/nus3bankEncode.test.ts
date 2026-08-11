@@ -11,7 +11,8 @@ import {
   replaceNus3BankStream,
   selectPlayableTone,
 } from '../../src/codec';
-import { loadTestG719EncoderWasm, loadTestG719Wasm } from '../helpers/g719';
+import { HAS_G719_DECODER, HAS_G719_ENCODER, loadTestG719EncoderWasm, loadTestG719Wasm } from '../helpers/g719';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const TEMPLATE_PATH = resolve(__dirname, '../../src/assets/song-template.nus3bank');
 const REPO = resolve(__dirname, '../../..');
@@ -28,7 +29,7 @@ function testPcm(samples: number): [Int16Array, Int16Array] {
   ];
 }
 
-describe('game-native G.719 sound-bank encoding', () => {
+describe.skipIf(!HAS_CORPUS || !HAS_G719_ENCODER || !HAS_G719_DECODER)('game-native G.719 sound-bank encoding', () => {
   test('writes the observed stereo BNSF/IS22 frame layout', async () => {
     const stream = await encodeG719Bnsf(testPcm(1_500), await loadTestG719EncoderWasm());
     const bankBytes = createNus3BankFromTemplate(await templateBytes(), {

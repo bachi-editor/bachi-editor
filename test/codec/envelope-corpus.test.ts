@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { openEnvelope, sealEnvelope } from '../../src/codec/envelope';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
 import { DUMPS, loadBytes, walkBins } from '../helpers/dumps';
+import { HAS_CORPUS } from '../helpers/resources';
 
 // Stable assertion that two Uint8Arrays match without inflating the failure log.
 function expectByteEqual(a: Uint8Array, b: Uint8Array, where: string): void {
@@ -22,7 +23,7 @@ function expectByteEqual(a: Uint8Array, b: Uint8Array, where: string): void {
 // Every dump must round-trip through the AES+gzip envelope byte-for-byte, whatever
 // IV scheme its files use (CHN has fixed IVs, JPN random IVs — sealEnvelope preserves
 // each file's own IV, so both recover identical bytes).
-describe.each(DUMPS)('envelope corpus [$region]: payload-level round-trip is byte-perfect', ({ x64 }) => {
+describe.skipIf(!HAS_CORPUS).each(DUMPS)('envelope corpus [$region]: payload-level round-trip is byte-perfect', ({ x64 }) => {
   const DATATABLE_DIR = resolve(x64, 'datatable');
   const FUMEN_DIR = resolve(x64, 'fumen');
 
@@ -66,7 +67,7 @@ describe.each(DUMPS)('envelope corpus [$region]: payload-level round-trip is byt
 
 // Sentinel: every dump's corpus directories must exist so the walks above aren't
 // silently empty.
-test.each(DUMPS)('corpus directories exist [$region]', async ({ x64 }) => {
+test.skipIf(!HAS_CORPUS).each(DUMPS)('corpus directories exist [$region]', async ({ x64 }) => {
   const d = await stat(resolve(x64, 'datatable'));
   const f = await stat(resolve(x64, 'fumen'));
   expect(d.isDirectory()).toBe(true);

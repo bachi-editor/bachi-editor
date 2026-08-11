@@ -13,8 +13,9 @@ import { deleteSong } from '../../src/model/edits';
 import { saveDatatables, sealDatatable } from '../../src/fs/write';
 import { decodeFumen } from '../../src/codec/fumen/decode';
 import { openEnvelope } from '../../src/codec/envelope';
-import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from '../helpers/keys';
 import { detectJsonTextStyle, formatJsonText, readNus3BankDemoStartMs, type Fumen } from '../../src/codec';
+import { HAS_CORPUS } from '../helpers/resources';
 
 Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 
@@ -114,7 +115,7 @@ async function seedRoot(base: RawDatatables): Promise<{ root: ProjectRoot; datat
 }
 
 describe('saveDatatables — delete-song asset cleanup', () => {
-  test('removes deleted-song assets without creating extra files', async () => {
+  test.skipIf(!HAS_KEYS)('removes deleted-song assets without creating extra files', async () => {
     const base = baselineTables();
     const draft = deleteSong(base, 1); // delete "aaa"
     const { root, datatable, fumen, sound } = await seedRoot(base);
@@ -135,7 +136,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect(result.removedAssets).toEqual([{ songId: 'aaa' }]);
   });
 
-  test('writes edited charts in place and reports savedFumens', async () => {
+  test.skipIf(!HAS_CORPUS)('writes edited charts in place and reports savedFumens', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     // Save an edited version of a real chart into fumen/aaa/aaa_m.bin.
@@ -174,7 +175,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect([...aaaDir.children.keys()].sort()).toEqual(['aaa_h.bin', 'aaa_m.bin']);
   });
 
-  test('writes sound-bank demo-start metadata without creating extra files', async () => {
+  test.skipIf(!HAS_CORPUS)('writes sound-bank demo-start metadata without creating extra files', async () => {
     const base = baselineTables();
     const { root, sound } = await seedRoot(base);
     const REPO = resolve(__dirname, '../../..');
@@ -193,7 +194,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect([...sound.children.keys()]).toEqual(['song_aaa.nus3bank']);
   });
 
-  test('a chart whose header measure count is corrupt aborts the save with nothing written', async () => {
+  test.skipIf(!HAS_CORPUS)('a chart whose header measure count is corrupt aborts the save with nothing written', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     const REPO = resolve(__dirname, '../../..');
@@ -219,7 +220,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect([...aaaDir.children.keys()].sort()).toEqual(['aaa_h.bin', 'aaa_m.bin']);
   });
 
-  test('writes created chart files without sidecars and reports createdFumens', async () => {
+  test.skipIf(!HAS_CORPUS)('writes created chart files without sidecars and reports createdFumens', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     const REPO = resolve(__dirname, '../../..');
@@ -243,7 +244,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect(decodeFumen(written).measures.length).toBe(uraChart.measures.length);
   });
 
-  test('removes a chart file without leaving an extra copy and reports removedFumens', async () => {
+  test.skipIf(!HAS_KEYS)('removes a chart file without leaving an extra copy and reports removedFumens', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     const aaaDir = fumen.children.get('aaa') as MemDir;
@@ -260,7 +261,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect([...aaaDir.children.keys()].sort()).toEqual(['aaa_h.bin', 'aaa_m.bin']);
   });
 
-  test('removing an already-absent chart file is a no-op', async () => {
+  test.skipIf(!HAS_KEYS)('removing an already-absent chart file is a no-op', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     const aaaDir = fumen.children.get('aaa') as MemDir;
@@ -274,7 +275,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     expect([...aaaDir.children.keys()].sort()).toEqual(before);
   });
 
-  test('no removed songs → no asset cleanup, only edited datatables written', async () => {
+  test.skipIf(!HAS_KEYS)('no removed songs → no asset cleanup, only edited datatables written', async () => {
     const base = baselineTables();
     // edit a star instead of deleting — musicinfo dirty, no removals.
     const draft: RawDatatables = {
@@ -295,7 +296,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
   // The game writes its datatables CRLF + tab indented (JPN 39.06) and a save
   // overwrites those files in place, so the writer re-emits whatever layout the
   // file on disk already had instead of minifying it.
-  test('an edited file keeps the JSON layout it had on disk', async () => {
+  test.skipIf(!HAS_CORPUS)('an edited file keeps the JSON layout it had on disk', async () => {
     const base = baselineTables();
     const style = detectJsonTextStyle('{"items":[\r\n\t{\r\n\t\t"id":"a"\r\n\t}\r\n]}\r\n');
     const { root, datatable } = await seedRoot(base);
@@ -323,7 +324,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
 // (The store decides which charts are dirty via collectFumenDiffs/isFumenDirty;
 // here we prove the fs layer writes exactly the slots it is handed and leaves
 // every other slot — and every other file — byte-for-byte untouched.)
-describe('saveDatatables — unchanged charts are never written (Phase 7.3)', () => {
+describe.skipIf(!HAS_CORPUS)('saveDatatables — unchanged charts are never written (Phase 7.3)', () => {
   async function realChart(): Promise<Fumen> {
     const REPO = resolve(__dirname, '../../..');
     const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'));

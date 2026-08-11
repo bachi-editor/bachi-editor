@@ -31,6 +31,7 @@ import { encodeFumen } from '../../src/codec/fumen/encode';
 import { makeFumenHeader } from '../../src/codec/fumen/header';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -205,7 +206,7 @@ describe('Phase 8.6 — fumen byte-coverage', () => {
     expect(walkCoverage(withTrailer).end).not.toBe(withTrailer.length);
   });
 
-  test('every corpus payload is 100% typed-or-documented-reserved bytes', async () => {
+  test.skipIf(!HAS_CORPUS)('every corpus payload is 100% typed-or-documented-reserved bytes', async () => {
     const all: string[] = [];
     for await (const p of walkBins(FUMEN_DIR)) all.push(p);
     all.sort();

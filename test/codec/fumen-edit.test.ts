@@ -11,6 +11,7 @@ import {
   setMeasureBranchInfo,
   updateMeasureProperties,
 } from '../../src/model/fumenEdits';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -21,7 +22,7 @@ async function decryptedPayload(p: string): Promise<Uint8Array> {
   return payload;
 }
 
-describe('fumen edits round-trip cleanly', () => {
+describe.skipIf(!HAS_CORPUS)('fumen edits round-trip cleanly', () => {
   test('adding a Don note to measure 0 branch 0 survives encode→decode', async () => {
     const payload = await decryptedPayload(resolve(FUMEN_DIR, '10binz/10binz_n.bin'));
     const fumen = decodeFumen(payload);

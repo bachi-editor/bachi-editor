@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { parseDanConfig, serializeDanConfig } from '../../src/codec/serverdata/danData';
 import { BORDER_TYPE_ALL, BORDER_TYPE_PER_SONG, EXPECTED_ODAI_SONGS } from '../../src/codec/serverdata/types';
+import { HAS_SERVER_DATA } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const DATA = resolve(REPO, 'resources/TaikoLocalServer-dev/Host/wwwroot/data');
@@ -12,7 +13,7 @@ async function readText(name: string): Promise<string> {
   return readFile(resolve(DATA, name), 'utf8');
 }
 
-describe('dani config codec', () => {
+describe.skipIf(!HAS_SERVER_DATA)('dani config codec', () => {
   // The core guarantee: an unchanged file re-saves byte-for-byte identically.
   for (const name of FILES) {
     test(`${name} round-trips byte-identically`, async () => {

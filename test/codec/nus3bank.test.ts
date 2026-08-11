@@ -21,6 +21,7 @@ import {
   RiffWaveMetadata,
   selectPlayableTone,
 } from '../../src/codec';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
@@ -106,7 +107,7 @@ function testDspHeader(coefficients = Array.from({ length: 16 }, () => 0)): Idsp
 }
 
 describe('nus3bank parser', () => {
-  test('parses a normal BNSF song bank', async () => {
+  test.skipIf(!HAS_CORPUS)('parses a normal BNSF song bank', async () => {
     const bank = await loadBank('song_kumatm.nus3bank');
     expect(bank.warnings).toEqual([]);
     expect(bank.sections.map((s) => s.id)).toEqual(EXPECTED_SECTIONS);
@@ -130,7 +131,7 @@ describe('nus3bank parser', () => {
     expect(metadata.sampleCount).toBeGreaterThan(0);
   });
 
-  test('parses the minority IDSP song shape', async () => {
+  test.skipIf(!HAS_CORPUS)('parses the minority IDSP song shape', async () => {
     const bank = await loadBank('song_i7poli.nus3bank');
     expect(bank.tones).toHaveLength(1);
     expect(bank.tones[0].stream?.magic).toBe('IDSP');
@@ -149,7 +150,7 @@ describe('nus3bank parser', () => {
     expect(metadata.sampleCount).toBeGreaterThan(0);
   });
 
-  test('parses a large BNSF song bank', async () => {
+  test.skipIf(!HAS_CORPUS)('parses a large BNSF song bank', async () => {
     const bank = await loadBank('song_tmap4.nus3bank');
     expect(bank.byteLength).toBeGreaterThan(9_000_000);
     expect(bank.tones).toHaveLength(1);
@@ -160,7 +161,7 @@ describe('nus3bank parser', () => {
     expect(metadata.sampleCount).toBeGreaterThan(9_000_000);
   });
 
-  test('locates song demo-start metadata across observed TONE record shapes', async () => {
+  test.skipIf(!HAS_CORPUS)('locates song demo-start metadata across observed TONE record shapes', async () => {
     expect(readNus3BankDemoStartMs(await loadBytes('song_rockxx.nus3bank'), 'song_rockxx')).toBe(6395);
     expect(readNus3BankDemoStartMs(await loadBytes('song_tmap4.nus3bank'), 'song_tmap4')).toBe(0);
     expect(readNus3BankDemoStartMs(await loadBytes('song_3dsop.nus3bank'), 'song_3dsop')).toBe(70426);
@@ -168,7 +169,7 @@ describe('nus3bank parser', () => {
     expect(readNus3BankDemoStartMs(await loadBytes('song_kumatm.nus3bank'), 'song_kumatm')).toBe(71843);
   });
 
-  test('patches song demo-start metadata without moving the stream payload', async () => {
+  test.skipIf(!HAS_CORPUS)('patches song demo-start metadata without moving the stream payload', async () => {
     const bytes = await loadBytes('song_10binz.nus3bank');
     const before = parseNus3Bank(bytes);
     const beforeSelection = selectPlayableTone(before, 'song_10binz')!;
@@ -182,7 +183,7 @@ describe('nus3bank parser', () => {
     expect(extractStreamBytes(patched, afterSelection.stream)).toEqual(extractStreamBytes(bytes, beforeSelection.stream));
   });
 
-  test('parses non-song RIFF tone banks', async () => {
+  test.skipIf(!HAS_CORPUS)('parses non-song RIFF tone banks', async () => {
     const bank = await loadBank('se_neiro_00_v12a.nus3bank');
     expect(bank.tones).toHaveLength(6);
     expect(bank.tones.map((t) => t.stream?.magic)).toEqual(['RIFF', 'RIFF', 'RIFF', 'RIFF', 'RIFF', 'RIFF']);
@@ -196,14 +197,14 @@ describe('nus3bank parser', () => {
     });
   });
 
-  test('keeps non-audio TONE records as noStreamReason', async () => {
+  test.skipIf(!HAS_CORPUS)('keeps non-audio TONE records as noStreamReason', async () => {
     const bank = await loadBank('se_common_v12a.nus3bank');
     expect(bank.tones).toHaveLength(54);
     expect(bank.tones.filter((t) => t.stream)).toHaveLength(52);
     expect(bank.tones.filter((t) => t.noStreamReason)).toHaveLength(2);
   });
 
-  test('rejects out-of-bounds PACK references', async () => {
+  test.skipIf(!HAS_CORPUS)('rejects out-of-bounds PACK references', async () => {
     const bytes = (await loadBytes('song_kumatm.nus3bank')).slice();
     const bank = parseNus3Bank(bytes);
     const tone = bank.tones[0];
@@ -238,7 +239,7 @@ describe('nus3bank parser', () => {
 
   // The Sound tab's single import button routes on this: NUS3 magic means copy
   // the bank in place, anything else goes through the audio-conversion pipeline.
-  test('sniffs the NUS3 magic without parsing structure', async () => {
+  test.skipIf(!HAS_CORPUS)('sniffs the NUS3 magic without parsing structure', async () => {
     const bank = await loadBytes('song_kumatm.nus3bank');
     expect(isNus3BankBytes(bank)).toBe(true);
     expect(isNus3BankBytes(bank.subarray(0, 4))).toBe(true);
@@ -250,7 +251,7 @@ describe('nus3bank parser', () => {
   });
 });
 
-describe('nus3bank tone selection', () => {
+describe.skipIf(!HAS_CORPUS)('nus3bank tone selection', () => {
   test('selects the exact song stem and exposes stream bytes', async () => {
     const bytes = await loadBytes('song_kumatm.nus3bank');
     const bank = parseNus3Bank(bytes);
@@ -286,7 +287,7 @@ describe('nus3bank tone selection', () => {
   });
 });
 
-describe('nus3bank decoder decision gate', () => {
+describe.skipIf(!HAS_CORPUS)('nus3bank decoder decision gate', () => {
   test('classifies BNSF/IS22 as supported via a supplied G.719 wasm decoder', async () => {
     const bank = await loadBank('song_kumatm.nus3bank');
     const selected = selectPlayableTone(bank, 'song_kumatm');
@@ -318,7 +319,7 @@ describe('nus3bank decoder decision gate', () => {
   });
 });
 
-describe('BNSF frame layout', () => {
+describe.skipIf(!HAS_CORPUS)('BNSF frame layout', () => {
   test('maps interleaved G.719 frames by block and channel', async () => {
     const bytes = await loadBytes('song_kumatm.nus3bank');
     const bank = parseNus3Bank(bytes);
@@ -348,7 +349,7 @@ describe('BNSF frame layout', () => {
   });
 });
 
-describe('IDSP data layout', () => {
+describe.skipIf(!HAS_CORPUS)('IDSP data layout', () => {
   test('maps per-channel DSP headers and data ranges', async () => {
     const bank = await loadBank('song_i7poli.nus3bank');
     const selected = selectPlayableTone(bank, 'song_i7poli');
@@ -386,7 +387,7 @@ describe('IDSP DSP-ADPCM decode', () => {
     expect([...pcm]).toEqual(Array.from({ length: 14 }, () => 1));
   });
 
-  test('partially decodes a real IDSP song to planar Float32 PCM', async () => {
+  test.skipIf(!HAS_CORPUS)('partially decodes a real IDSP song to planar Float32 PCM', async () => {
     const bytes = await loadBytes('song_i7poli.nus3bank');
     const bank = parseNus3Bank(bytes);
     const selected = selectPlayableTone(bank, 'song_i7poli');
@@ -406,7 +407,7 @@ describe('IDSP DSP-ADPCM decode', () => {
 // has to be re-stated whenever the dump gains songs; the ratios that hold for
 // *every* file are expressed against `files.length` instead, so an ordinary
 // added song only moves one number.
-test('CHN sound corpus shape is documented', async () => {
+test.skipIf(!HAS_CORPUS)('CHN sound corpus shape is documented', async () => {
   const files = (await readdir(SOUND_DIR)).filter((name) => name.endsWith('.nus3bank')).sort();
   expect(files).toHaveLength(1121);
 

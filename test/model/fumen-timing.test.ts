@@ -17,6 +17,7 @@ import {
   measureTimings,
   synthesizeOffsets,
 } from '../../src/model/fumenTiming';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -94,7 +95,7 @@ describe('fumen timing map', () => {
     expect(timing.starts).toEqual([0, 2000, 2500]);
   });
 
-  test('locks doncam short gimmick measures to their real 0.25/0.75 beat lengths', async () => {
+  test.skipIf(!HAS_CORPUS)('locks doncam short gimmick measures to their real 0.25/0.75 beat lengths', async () => {
     const timing = measureTimings(await loadChart('doncam/doncam_m.bin'));
 
     expect(timing.durations[0]).toBeCloseTo(125, 3);
@@ -102,7 +103,7 @@ describe('fumen timing map', () => {
     expect(timing.sources[0]).toBe('offset');
   });
 
-  test('locks butou6 pickup timing and first-downbeat audio delay', async () => {
+  test.skipIf(!HAS_CORPUS)('locks butou6 pickup timing and first-downbeat audio delay', async () => {
     const chart = await loadChart('butou6/butou6_m.bin');
     const timing = measureTimings(chart);
 
@@ -112,7 +113,7 @@ describe('fumen timing map', () => {
     expect(chartIntroDelayMs(chart)).toBeCloseTo(1948, 0);
   });
 
-  test('locks clsdnu waltz measures as three-beat spans with a two-beat break', async () => {
+  test.skipIf(!HAS_CORPUS)('locks clsdnu waltz measures as three-beat spans with a two-beat break', async () => {
     const chart = await loadChart('clsdnu/clsdnu_m.bin');
     const timing = measureTimings(chart);
     const firstBeat = beatMs(chart.measures[0].bpm);
@@ -154,7 +155,7 @@ describe('synthesizeOffsets (Phase 12.2 inverse)', () => {
     expect(offsets[0]).toBe(chart.measures[0].offset);
   });
 
-  test('reproduces the stored offset column of a real corpus chart', async () => {
+  test.skipIf(!HAS_CORPUS)('reproduces the stored offset column of a real corpus chart', async () => {
     const chart = await loadChart('doncam/doncam_m.bin');
     const timing = measureTimings(chart);
     const bpms = chart.measures.map((m) => m.bpm);

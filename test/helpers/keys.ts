@@ -1,27 +1,13 @@
-// The game's decryption keys are NOT stored in app/ — the shipped editor takes
-// them from the user at open time. Tests still need the real keys to decode the
-// real fixture .bin files, so they read them from their canonical home: the
-// TaikoArcadeLoader source (resources/, outside app/). This keeps the literals
-// out of the app entirely while letting the suite decode the corpus.
+// The game's decryption keys are NOT stored in this repository — the shipped
+// editor takes them from the user at open time, and the production bundle
+// contains no key material at all.
 //
-// The two keys are region-shared: the same datatable/fumen keys decrypt both the
-// CHN dump and the JPN39.06 dump (verified corpus-wide), so the exports carry no
-// region prefix.
+// Tests need the real keys to decode the real fixture .bin files. They come from
+// `.env` (BACHI_DATATABLE_KEY / BACHI_FUMEN_KEY) or, failing that, from their
+// canonical home in the TaikoArcadeLoader source outside this repo. Resolution
+// lives in ./resources; this module is the stable import path for the suites.
+//
+// When no keys are available both constants are the empty string. Guard the
+// suite with `describe.skipIf(!HAS_KEYS)` rather than using them unchecked.
 
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-
-const LOADER_SRC = new URL(
-  '../../../resources/TaikoArcadeLoader-Refactor/src/patches/layeredfs.cpp',
-  import.meta.url,
-);
-
-function loaderKey(name: 'datatableKey' | 'fumenKey'): string {
-  const src = readFileSync(fileURLToPath(LOADER_SRC), 'utf8');
-  const m = src.match(new RegExp(`${name}\\s*=\\s*"([0-9A-Fa-f]{64})"`));
-  if (!m) throw new Error(`could not find ${name} in TaikoArcadeLoader layeredfs.cpp`);
-  return m[1];
-}
-
-export const DATATABLE_KEY_HEX = loaderKey('datatableKey');
-export const FUMEN_KEY_HEX = loaderKey('fumenKey');
+export { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from './resources';

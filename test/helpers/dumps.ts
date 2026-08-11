@@ -3,23 +3,15 @@
 // schema) — the shared loader keys decrypt both. Running the corpus/round-trip
 // assertions over every entry here is how we prove a newly-added dump doesn't
 // break the codecs (AGENTS.md requirement #2: never break codec round-trips).
+//
+// Dump locations resolve through ./resources and are absent on a bare clone;
+// guard suites with `describe.skipIf(!HAS_CORPUS)`.
 
 import { readdir, readFile } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 
-const REPO = resolve(__dirname, '../../..');
-
-export interface Dump {
-  /** Short region label, surfaced in parametrized test names via `$region`. */
-  region: string;
-  /** Absolute path to the dump's `Data/x64` directory. */
-  x64: string;
-}
-
-export const DUMPS: readonly Dump[] = [
-  { region: 'CHN', x64: resolve(REPO, 'resources/TaikoCHN/Data/x64') },
-  { region: 'JPN', x64: resolve(REPO, 'resources/JPN39.06/Data/x64') },
-];
+export type { Dump } from './resources';
+export { DUMPS, HAS_ALL_DUMPS, HAS_CHN_DUMP, HAS_CORPUS } from './resources';
 
 /** Recursively yield every `.bin` file path under `root`. */
 export async function* walkBins(root: string): AsyncGenerator<string> {

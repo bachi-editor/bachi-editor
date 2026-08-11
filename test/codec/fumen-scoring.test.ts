@@ -16,6 +16,7 @@ import {
 } from '../../src/codec/fumen/authoring';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -97,7 +98,7 @@ describe('fumen authoring helpers', () => {
     expect(Number.isFinite(blank.hpGainOk)).toBe(true);
   });
 
-  test('computeScoreCeiling reproduces the shipped dummyData across the corpus', async () => {
+  test.skipIf(!HAS_CORPUS)('computeScoreCeiling reproduces the shipped dummyData across the corpus', async () => {
     const all: string[] = [];
     for await (const p of walkBins(FUMEN_DIR)) all.push(p);
     all.sort();

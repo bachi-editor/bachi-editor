@@ -26,6 +26,7 @@ import {
 } from '../../src/model/shinuchi';
 import { DUMPS, loadBytes } from '../helpers/dumps';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 interface DifficultyFields {
   difficulty: FumenDifficulty;
@@ -90,7 +91,7 @@ async function loadCharts(x64: string): Promise<Chart[]> {
   return charts;
 }
 
-describe.each(DUMPS)('Shin-uchi scoring over the $region corpus', (dump) => {
+describe.skipIf(!HAS_CORPUS).each(DUMPS)('Shin-uchi scoring over the $region corpus', (dump) => {
   test('every shipped chart is tuned to land just above 1,000,000', async () => {
     const charts = await loadCharts(dump.x64);
     expect(charts.length).toBeGreaterThan(4000);

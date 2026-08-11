@@ -22,6 +22,7 @@ import type { AssetInventory } from '../../src/fs/inventory';
 import type { FumenSlot } from '../../src/fs/fumens';
 import type { ProjectRoot } from '../../src/fs/project';
 import type { Fumen } from '../../src/codec';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const SONG_ID = 'aaa';
 const SLOT: FumenSlot = { filename: 'aaa_m.bin', difficulty: 'oni', player: 'single' };
@@ -102,7 +103,7 @@ function s() {
   return useAppStore.getState();
 }
 
-describe('Phase 7.2 — net-zero editing leaves the save pipeline clean', () => {
+describe.skipIf(!HAS_CORPUS)('Phase 7.2 — net-zero editing leaves the save pipeline clean', () => {
   test('place a note then undo: edit count returns to 0 and no chart is dirty', () => {
     openWithChart();
     expect(s().getEditCount()).toBe(0);

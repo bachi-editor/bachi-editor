@@ -16,6 +16,7 @@ import {
   fumenNoteTypeLabel,
   isKnownNoteType,
 } from '../../src/codec/fumen/types';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -44,7 +45,7 @@ describe('Phase 8.1 — note-type coverage', () => {
     for (const t of SPECIAL_NOTE_TYPES) expect(FUMEN_NOTE_TYPE_NAMES[t]).toBeUndefined();
   });
 
-  test('every note-type id in the corpus is named or a documented special', async () => {
+  test.skipIf(!HAS_CORPUS)('every note-type id in the corpus is named or a documented special', async () => {
     const present = new Set<number>();
     const specialNonZeroDuration = new Set<number>();
     const specialWithSuffix = new Set<number>();

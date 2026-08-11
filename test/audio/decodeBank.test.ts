@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { BankDecodeError, decodeBankToPcm } from '../../src/audio/decodeBank';
 import { loadTestG719Wasm } from '../helpers/g719';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
@@ -13,7 +14,7 @@ async function loadBytes(name: string): Promise<Uint8Array> {
 }
 
 describe('decodeBankToPcm', () => {
-  test('routes a BNSF/IS22 song bank through the G.719 decoder', async () => {
+  test.skipIf(!HAS_CORPUS)('routes a BNSF/IS22 song bank through the G.719 decoder', async () => {
     const bytes = await loadBytes('song_kumatm.nus3bank');
     const decoded = await decodeBankToPcm(bytes, 'song_kumatm', {
       maxSamples: 48_000,
@@ -37,7 +38,7 @@ describe('decodeBankToPcm', () => {
     }
   });
 
-  test('routes an IDSP song bank through the DSP-ADPCM decoder', async () => {
+  test.skipIf(!HAS_CORPUS)('routes an IDSP song bank through the DSP-ADPCM decoder', async () => {
     const bytes = await loadBytes('song_i7poli.nus3bank');
     const decoded = await decodeBankToPcm(bytes, 'song_i7poli', { maxSamples: 4_410 });
     expect(decoded.codec).toContain('IDSP');
@@ -56,7 +57,7 @@ describe('decodeBankToPcm', () => {
     expect(err.message).toBe('no tone');
   });
 
-  test('BNSF playback is disabled cleanly when no decoder was supplied', async () => {
+  test.skipIf(!HAS_CORPUS)('BNSF playback is disabled cleanly when no decoder was supplied', async () => {
     const bytes = await loadBytes('song_kumatm.nus3bank');
     await expect(decodeBankToPcm(bytes, 'song_kumatm')).rejects.toThrow(
       'G.719 decoder WASM is not configured',

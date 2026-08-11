@@ -8,6 +8,7 @@ import {
   selectPlayableTone,
 } from '../../src/codec';
 import { loadTestG719Wasm } from '../helpers/g719';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
@@ -36,7 +37,7 @@ function stats(pcm: Float32Array) {
   return { peak, rms: Math.sqrt(sumSq / pcm.length), nonFinite, nonzero };
 }
 
-describe('BNSF/IS22 G.719 decode', () => {
+describe.skipIf(!HAS_CORPUS)('BNSF/IS22 G.719 decode', () => {
   // 5s prefix keeps the test fast while spanning the song's ~1.4s silent
   // intro plus real signal (~250 frames/channel of overlap-add state).
   const PREFIX = 240_000;

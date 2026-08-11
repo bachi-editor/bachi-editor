@@ -20,6 +20,7 @@ import { validate } from '../../src/model/validation';
 import { sealDatatable } from '../../src/fs/write';
 import { MUSICINFO_SUPPORTED_FIELDS, openEnvelope, decodeJsonPayload } from '../../src/codec';
 import { DATATABLE_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 function fixture(): RawDatatables {
   return {
@@ -505,7 +506,7 @@ describe('validation', () => {
   });
 });
 
-describe('seal round-trip', () => {
+describe.skipIf(!HAS_CORPUS)('seal round-trip', () => {
   test('sealDatatable → openEnvelope recovers the edited JSON', async () => {
     const base = fixture();
     const draft = setStar(base, 1, 'starMania', 9);

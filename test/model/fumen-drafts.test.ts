@@ -18,6 +18,7 @@ import {
 } from '../../src/model/fumenDrafts';
 import { canEditMeasureDuration, setMeasureDuration } from '../../src/model/fumenEdits';
 import { measureTimings } from '../../src/model/fumenTiming';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -48,13 +49,13 @@ function withDon(fumen: Fumen): Fumen {
   return { ...fumen, measures };
 }
 
-describe('fumenKey', () => {
+describe.skipIf(!HAS_CORPUS)('fumenKey', () => {
   test('joins songId and filename', () => {
     expect(fumenKey('10binz', '10binz_n.bin')).toBe('10binz/10binz_n.bin');
   });
 });
 
-describe('isFumenDirty', () => {
+describe.skipIf(!HAS_CORPUS)('isFumenDirty', () => {
   test('a chart is not dirty against itself', async () => {
     const f = await loadChart('10binz/10binz_n.bin');
     expect(isFumenDirty(f, f)).toBe(false);
@@ -73,7 +74,7 @@ describe('isFumenDirty', () => {
   });
 });
 
-describe('diffFumen', () => {
+describe.skipIf(!HAS_CORPUS)('diffFumen', () => {
   test('reports the note-count delta and a positive byte delta', async () => {
     const base = await loadChart('10binz/10binz_n.bin');
     const draft = withDon(base);
@@ -111,7 +112,7 @@ describe('diffFumen', () => {
   });
 });
 
-describe('collectFumenDiffs', () => {
+describe.skipIf(!HAS_CORPUS)('collectFumenDiffs', () => {
   test('returns only dirty slots, sorted, skipping draft-less and baseline-less keys', async () => {
     const base = await loadChart('10binz/10binz_n.bin');
     const key = fumenKey('10binz', SLOT.filename);

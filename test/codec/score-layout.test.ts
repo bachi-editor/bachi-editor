@@ -19,6 +19,7 @@ import {
   playheadGeometry,
   STAVE_SNAP_INSET,
 } from '../../src/ui/fumen/scoreLayout';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const FIXTURE = path.resolve(
   __dirname,
@@ -78,7 +79,7 @@ function makeFumen(measures: FumenMeasure[]): Fumen {
 }
 
 describe('layoutScore', () => {
-  it('produces positive-area rectangles for every measure and assigns notes to a stave', async () => {
+  it.skipIf(!HAS_CORPUS)('produces positive-area rectangles for every measure and assigns notes to a stave', async () => {
     const bytes = new Uint8Array(fs.readFileSync(FIXTURE));
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const fumen = decodeFumen(payload);
@@ -141,7 +142,7 @@ describe('layoutScore', () => {
     expect(layout.measureStartMs).toEqual([0, 2000, 4000]);
   });
 
-  it('lays out doncam gimmick measures at their real sub-four-beat width', async () => {
+  it.skipIf(!HAS_CORPUS)('lays out doncam gimmick measures at their real sub-four-beat width', async () => {
     const bytes = new Uint8Array(fs.readFileSync(DONCAM_FIXTURE));
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const fumen = decodeFumen(payload);
@@ -159,7 +160,7 @@ describe('layoutScore', () => {
     expect(Math.min(...widths)).toBeLessThan(60);
   });
 
-  it('aligns butou6 measure starts to the real audio offsets', async () => {
+  it.skipIf(!HAS_CORPUS)('aligns butou6 measure starts to the real audio offsets', async () => {
     const bytes = new Uint8Array(fs.readFileSync(BUTOU6_FIXTURE));
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const fumen = decodeFumen(payload);
@@ -189,7 +190,7 @@ describe('layoutScore', () => {
     expect(layout.measureStartMs).toEqual([0, 2000, 2500]);
   });
 
-  it('restores doncam BPM-change note gaps to their true 1/8 and 1/2 spacing', async () => {
+  it.skipIf(!HAS_CORPUS)('restores doncam BPM-change note gaps to their true 1/8 and 1/2 spacing', async () => {
     const bytes = new Uint8Array(fs.readFileSync(DONCAM_FIXTURE));
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const fumen = decodeFumen(payload);
@@ -331,7 +332,7 @@ describe('layoutScore', () => {
     expect(layout.rows[0].gutterWidth).toBe(layout.config.rowGutterWidth);
   });
 
-  it('marks HS changes in Rotter Tarmination Ura', async () => {
+  it.skipIf(!HAS_CORPUS)('marks HS changes in Rotter Tarmination Ura', async () => {
     const bytes = new Uint8Array(fs.readFileSync(SWEEP1_URA_FIXTURE));
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const fumen = decodeFumen(payload);
@@ -768,7 +769,7 @@ describe('chartIntroDelayMs', () => {
     expect(chartIntroDelayMs(makeFumen([]))).toBe(0);
   });
 
-  it('matches the player-reported first-downbeat for butou6 and cls10', async () => {
+  it.skipIf(!HAS_CORPUS)('matches the player-reported first-downbeat for butou6 and cls10', async () => {
     const load = async (fixture: string) => {
       const { payload } = await openEnvelope(new Uint8Array(fs.readFileSync(fixture)), FUMEN_KEY_HEX);
       return decodeFumen(payload);

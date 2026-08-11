@@ -6,7 +6,7 @@ import {
   G719_SAMPLES_PER_FRAME,
   validateG719EncoderWasm,
 } from '../../src/codec';
-import { loadTestG719EncoderWasm, loadTestG719Wasm } from '../helpers/g719';
+import { HAS_G719_DECODER, HAS_G719_ENCODER, loadTestG719EncoderWasm, loadTestG719Wasm } from '../helpers/g719';
 
 function sineFrame(): Int16Array {
   return Int16Array.from({ length: G719_SAMPLES_PER_FRAME }, (_, i) =>
@@ -14,7 +14,7 @@ function sineFrame(): Int16Array {
 }
 
 describe('user-supplied G.719 encoder', () => {
-  test('accepts the compatible development module', async () => {
+  test.skipIf(!HAS_G719_ENCODER)('accepts the compatible development module', async () => {
     await expect(validateG719EncoderWasm(await loadTestG719EncoderWasm())).resolves.toBeUndefined();
   });
 
@@ -24,7 +24,7 @@ describe('user-supplied G.719 encoder', () => {
     await expect(validateG719EncoderWasm(emptyModule)).rejects.toThrow('required memory export');
   });
 
-  test('rejects encoder modules with an unexpected host import', async () => {
+  test.skipIf(!HAS_G719_ENCODER)('rejects encoder modules with an unexpected host import', async () => {
     const bytes = (await loadTestG719EncoderWasm()).slice();
     const name = [0x6c, 0x6f, 0x67, 0x31, 0x30]; // log10
     const offset = bytes.findIndex((_, index) => name.every((byte, i) => bytes[index + i] === byte));
@@ -33,7 +33,7 @@ describe('user-supplied G.719 encoder', () => {
     await expect(validateG719EncoderWasm(bytes)).rejects.toThrow('env.log10');
   });
 
-  test('matches the reference-wrapper golden frame and decodes successfully', async () => {
+  test.skipIf(!HAS_G719_ENCODER || !HAS_G719_DECODER)('matches the reference-wrapper golden frame and decodes successfully', async () => {
     const encoder = await G719Encoder.create(await loadTestG719EncoderWasm(), 1, 320);
     const encoded = Uint8Array.from(encoder.encodeFrame(0, sineFrame()));
     encoder.dispose();
@@ -51,7 +51,7 @@ describe('user-supplied G.719 encoder', () => {
     expect(Math.max(...decoded.map(Math.abs))).toBeLessThanOrEqual(32_768);
   });
 
-  test('reset restores deterministic channel state', async () => {
+  test.skipIf(!HAS_G719_ENCODER)('reset restores deterministic channel state', async () => {
     const encoder = await G719Encoder.create(await loadTestG719EncoderWasm(), 1, 320);
     const input = sineFrame();
     const first = Uint8Array.from(encoder.encodeFrame(0, input));

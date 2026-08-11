@@ -16,6 +16,7 @@ import {
 } from '../../src/codec/datatable/serde';
 import { DATATABLE_KEY_HEX } from '../helpers/keys';
 import { DUMPS, loadBytes } from '../helpers/dumps';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const FILES = ['musicinfo.bin', 'music_order.bin', 'wordlist.bin'] as const;
 
@@ -62,7 +63,7 @@ describe('JSON text style', () => {
  */
 const MIXED_STYLE = new Set(['CHN/musicinfo.bin']);
 
-describe.each(DUMPS)('datatable re-encode preserves layout [$region]', ({ region, x64 }) => {
+describe.skipIf(!HAS_CORPUS).each(DUMPS)('datatable re-encode preserves layout [$region]', ({ region, x64 }) => {
   test.each(FILES)('%s', async (name) => {
     const bytes = await loadBytes(resolve(x64, 'datatable', name));
     const { payload } = await openEnvelope(bytes, DATATABLE_KEY_HEX);

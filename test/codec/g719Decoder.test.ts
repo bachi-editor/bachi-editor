@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import { validateG719Wasm } from '../../src/codec';
-import { loadTestG719Wasm } from '../helpers/g719';
+import { HAS_G719_DECODER, loadTestG719Wasm } from '../helpers/g719';
 
 describe('user-supplied G.719 decoder validation', () => {
-  test('accepts the compatible development module', async () => {
+  test.skipIf(!HAS_G719_DECODER)('accepts the compatible development module', async () => {
     await expect(validateG719Wasm(await loadTestG719Wasm())).resolves.toBeUndefined();
   });
 

@@ -9,6 +9,7 @@ import {
   type DanEntry,
   type OdaiBorder,
 } from '../../src/codec/serverdata';
+import { HAS_SERVER_DATA } from '../helpers/resources';
 
 const DATA = resolvePath(__dirname, '../../..', 'resources/TaikoLocalServer-dev/Host/wwwroot/data');
 
@@ -141,7 +142,7 @@ function zero() {
 }
 
 describe('danStructureWarnings (constraints distilled from 6 seasons + corpus)', () => {
-  test('the real corpus raises ZERO structural warnings', async () => {
+  test.skipIf(!HAS_SERVER_DATA)('the real corpus raises ZERO structural warnings', async () => {
     for (const f of ['dan_data.json', 'gaiden_data.json']) {
       const config = parseDanConfig(await readFile(resolvePath(DATA, f), 'utf8'));
       for (const d of config) {
@@ -207,7 +208,7 @@ describe('danStructureWarnings (constraints distilled from 6 seasons + corpus)',
 describe('red/gold ordering (validateDan)', () => {
   const goldMsg = (d: DanEntry) => validateDan(d, resolve).some((i) => /gold is/.test(i.message));
 
-  test('validateDan is fully clean on the real corpus (no catalog)', async () => {
+  test.skipIf(!HAS_SERVER_DATA)('validateDan is fully clean on the real corpus (no catalog)', async () => {
     for (const f of ['dan_data.json', 'gaiden_data.json']) {
       const config = parseDanConfig(await readFile(resolvePath(DATA, f), 'utf8'));
       for (const d of config) {

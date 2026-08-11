@@ -3,6 +3,7 @@ import { loadDatatables, type RawDatatables } from '../../src/fs/datatables';
 import type { ProjectRoot } from '../../src/fs/project';
 import { sealDatatable } from '../../src/fs/write';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 class MemFile {
   readonly kind = 'file' as const;
@@ -25,7 +26,7 @@ class MemDir {
   }
 }
 
-describe('loadDatatables', () => {
+describe.skipIf(!HAS_CORPUS)('loadDatatables', () => {
   test('loads and decodes the three encrypted datatable bins', async () => {
     const tables: RawDatatables = {
       musicinfo: { items: [{ uniqueId: 1, id: 'aaa', genreNo: 0, starMania: 8 }] },

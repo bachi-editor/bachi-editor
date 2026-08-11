@@ -41,11 +41,29 @@ npm run build
 The minified static site is written to `dist/`. Its asset URLs are relative, so
 the same build works at a domain root or below a repository path.
 
-The full test suite includes corpus-backed codec and format checks. Those tests
-expect the maintainer's separately held game/server corpus under `../resources`;
-the corpus, production AES keys, and G.719 reference binaries are intentionally
-excluded from the production build. The application can still install,
-typecheck, and build without those resources.
+### Corpus-backed tests
+
+`npm test` passes on a bare clone. The corpus-backed codec and format checks
+skip themselves when their inputs are absent and the run prints a banner listing
+what is missing; everything that does not need the corpus still runs and must
+pass. Nothing here is ever committed or bundled — the AES keys, the game/server
+corpus, and the G.719 binaries are all excluded from the production build.
+
+To run the full suite, copy `.env.example` to `.env` and fill in what you have:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `BACHI_DATATABLE_KEY`, `BACHI_FUMEN_KEY` | AES-256 keys, 64 hex chars each | read from the TaikoArcadeLoader source under the corpus root |
+| `BACHI_RESOURCES_DIR` | maintainer's game/server corpus | `../resources` |
+| `BACHI_G719_DIR` | directory holding `g719.wasm` and `g719-encoder.wasm` | `vendor/g719`, else `$BACHI_RESOURCES_DIR/g719` |
+
+`.env` is gitignored and read only by the test suite. Shell variables override
+it. A malformed key fails the run rather than skipping, so typos surface.
+Proprietary codec binaries go in `vendor/g719/` — see `vendor/README.md`.
 
 ## Manage version and changelog information
 

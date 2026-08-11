@@ -6,6 +6,7 @@ import { encodeHeader } from '../../src/codec/fumen/header';
 import { DRUMROLL_NOTE_TYPES, FUMEN_NOTE_TYPE_NAMES } from '../../src/codec/fumen/types';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -35,7 +36,7 @@ interface TypeStat {
   hasSuffix: number;
 }
 
-describe('census probe', () => {
+describe.skipIf(!HAS_CORPUS)('census probe', () => {
   test('note-type + header census over the corpus', async () => {
     const all: string[] = [];
     for await (const p of walkBins(FUMEN_DIR)) all.push(p);

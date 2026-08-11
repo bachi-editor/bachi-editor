@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { openEnvelope, sealEnvelope } from '../../src/codec/envelope';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const DATATABLE_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/datatable');
@@ -12,7 +13,7 @@ async function load(p: string): Promise<Uint8Array> {
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
 }
 
-describe('envelope against real CHN datatable files', () => {
+describe.skipIf(!HAS_CORPUS)('envelope against real CHN datatable files', () => {
   test('decrypts musicinfo.bin to valid JSON', async () => {
     const bytes = await load(resolve(DATATABLE_DIR, 'musicinfo.bin'));
     const { payload } = await openEnvelope(bytes, DATATABLE_KEY_HEX);
@@ -60,7 +61,7 @@ describe('envelope against real CHN datatable files', () => {
   });
 });
 
-describe('envelope against real CHN fumen files', () => {
+describe.skipIf(!HAS_CORPUS)('envelope against real CHN fumen files', () => {
   test('decrypts a sample fumen and dumps the first 64 bytes for inspection', async () => {
     const fumenPath = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin');
     const bytes = await load(fumenPath);

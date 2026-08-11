@@ -29,6 +29,7 @@ import {
 import { measureTimings } from '../../src/model/fumenTiming';
 import { cloneFumen } from '../../src/model/fumenSlots';
 import type { Fumen } from '../../src/codec';
+import { HAS_CORPUS } from '../helpers/resources';
 
 const REPO = resolve(__dirname, '../../..');
 const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
@@ -89,7 +90,7 @@ function freePosition(fumen: Fumen, mi: number): number {
 
 const CHART = '10binz/10binz_m.bin';
 
-describe('Phase 7.1 — edit then revert is byte-perfect', () => {
+describe.skipIf(!HAS_CORPUS)('Phase 7.1 — edit then revert is byte-perfect', () => {
   test('decoded baseline re-encodes to its on-disk plaintext', async () => {
     const { payload, fumen } = await loadChart(CHART);
     expectByteIdentical(payload, fumen);

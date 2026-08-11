@@ -4,6 +4,7 @@ import { describe, expect, test } from 'vitest';
 import { verifyEncoderSelfConsistent } from '../../src/codec';
 import { validateFumenChart } from '../../src/model/fumenValidation';
 import { convertTjaForImport, decodeTjaBytes } from '../../src/model/tjaImport';
+import { HAS_TJA_CORPUS } from '../helpers/resources';
 
 const ESE_ROOT = fileURLToPath(new URL('../../../resources/ese/', import.meta.url));
 
@@ -17,7 +18,7 @@ async function tjaFiles(directory: string): Promise<string[]> {
   return nested.flat().sort();
 }
 
-describe('ESE TJA import corpus', () => {
+describe.skipIf(!HAS_TJA_CORPUS)('ESE TJA import corpus', () => {
   test('every TJA parses into saveable official fumen binaries', async () => {
     const files = await tjaFiles(ESE_ROOT);
     expect(files.length).toBeGreaterThan(3_000);

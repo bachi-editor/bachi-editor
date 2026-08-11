@@ -8,3 +8,12 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Local-only binaries: proprietary codecs and any other user-supplied modules.
+# Never commit these — see vendor/README.md.
+vendor/*
+!vendor/README.md
+
+# Belt-and-braces: key material must never enter the tree.
+*.pem
+*.key

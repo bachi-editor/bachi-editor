@@ -2,15 +2,15 @@ import { describe, expect, test } from 'vitest';
 import { aesDecrypt, aesEncrypt, LOADER_DETERMINISTIC_IV } from '../../src/codec/aes';
 import { gunzip, gzip } from '../../src/codec/gzip';
 import { hexToBytes } from '../../src/codec/keys';
-import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
+import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from '../helpers/keys';
 
 describe('hexToBytes', () => {
-  test('decodes the CHN datatable key to 32 bytes', () => {
+  test.skipIf(!HAS_KEYS)('decodes the CHN datatable key to 32 bytes', () => {
     const k = hexToBytes(DATATABLE_KEY_HEX);
     expect(k.length).toBe(32);
   });
 
-  test('decodes the CHN fumen key to 32 bytes', () => {
+  test.skipIf(!HAS_KEYS)('decodes the CHN fumen key to 32 bytes', () => {
     const k = hexToBytes(FUMEN_KEY_HEX);
     expect(k.length).toBe(32);
   });
@@ -20,7 +20,7 @@ describe('hexToBytes', () => {
   });
 });
 
-describe('AES-256-CBC round-trip', () => {
+describe.skipIf(!HAS_KEYS)('AES-256-CBC round-trip', () => {
   test('encrypt then decrypt recovers plaintext (deterministic IV)', async () => {
     const plaintext = new TextEncoder().encode('hello taiko');
     const sealed = await aesEncrypt(plaintext, DATATABLE_KEY_HEX, LOADER_DETERMINISTIC_IV);

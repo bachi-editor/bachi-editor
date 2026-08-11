@@ -12,6 +12,7 @@ import {
   type MusicOrderFile,
   type WordListFile,
 } from '../../src/codec/datatable/types';
+import { HAS_CORPUS } from '../helpers/resources';
 
 // Pure field-model invariant — independent of any dump.
 describe('musicinfo field model', () => {
@@ -29,7 +30,7 @@ describe('musicinfo field model', () => {
 
 // The editor's field model is region-agnostic: every dump must decode through the
 // same MusicInfo/MusicOrder/WordList shapes with no unmodelled musicinfo fields.
-describe.each(DUMPS)('datatable JSON shapes [$region]', ({ x64 }) => {
+describe.skipIf(!HAS_CORPUS).each(DUMPS)('datatable JSON shapes [$region]', ({ x64 }) => {
   const DT = resolve(x64, 'datatable');
 
   async function openJson<T>(name: string): Promise<T> {
@@ -67,7 +68,7 @@ describe.each(DUMPS)('datatable JSON shapes [$region]', ({ x64 }) => {
     console.log(`music_order: ${mo.items.length} entries`);
   });
 
-  test('wordlist.bin decodes to WordListFile with items array', async () => {
+  test.skipIf(!HAS_CORPUS)('wordlist.bin decodes to WordListFile with items array', async () => {
     const wl = await openJson<WordListFile>('wordlist.bin');
     expect(Array.isArray(wl.items)).toBe(true);
     expect(wl.items.length).toBeGreaterThan(0);
