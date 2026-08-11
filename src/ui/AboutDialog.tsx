@@ -14,7 +14,7 @@ import { useT, useUiLang } from '../i18n';
 import { APP_VERSION, RELEASE_NOTES } from '../releaseNotes';
 import { BrandMark, Icon, type IconName } from './shell/Icon';
 
-const ISSUES_URL = 'https://github.com/bachi-editor/bachi-editor.github.io/issues';
+const ISSUES_URL = 'https://github.com/bachi-editor/bachi-editor/issues';
 
 const PAGE_COUNT = 3;
 
