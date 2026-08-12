@@ -119,12 +119,12 @@ export function SongList() {
               trigger={(
                 <>
                   <Icon name="filter" />
-                  {t('songlist.filters')}
                   {filters.length > 0 && <span className="tk-filter-count">{filters.length}</span>}
                 </>
               )}
               triggerClassName={'tk-filter-trigger' + (filters.length > 0 ? ' on' : '')}
               triggerTitle={t('songlist.chooseFilters')}
+              triggerAriaLabel={t('songlist.chooseFilters')}
               minWidth={178}
             >
               {() => (
