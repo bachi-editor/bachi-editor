@@ -12,10 +12,9 @@ import {
   selectPlayableTone,
 } from '../../src/codec';
 import { HAS_G719_DECODER, HAS_G719_ENCODER, loadTestG719EncoderWasm, loadTestG719Wasm } from '../helpers/g719';
-import { HAS_CORPUS } from '../helpers/resources';
+import { HAS_CORPUS, RESOURCES_DIR } from '../helpers/resources';
 
 const TEMPLATE_PATH = resolve(__dirname, '../../src/assets/song-template.nus3bank');
-const REPO = resolve(__dirname, '../../..');
 
 async function templateBytes(): Promise<Uint8Array> {
   const file = await readFile(TEMPLATE_PATH);
@@ -98,10 +97,10 @@ describe.skipIf(!HAS_CORPUS || !HAS_G719_ENCODER || !HAS_G719_DECODER)('game-nat
   });
 
   test.each([
-    ['CHN', 'resources/TaikoCHN/Data/x64/sound/song_589him.nus3bank', 'song_589him'],
-    ['JPN', 'resources/JPN39.06/Data/x64/sound/song_armage.nus3bank', 'song_armage'],
+    ['CHN', 'TaikoCHN/Data/x64/sound/song_589him.nus3bank', 'song_589him'],
+    ['JPN', 'JPN39.06/Data/x64/sound/song_armage.nus3bank', 'song_armage'],
   ])('preserves the real %s bank shape when replacing its stream', async (_region, relative, stem) => {
-    const file = await readFile(resolve(REPO, relative));
+    const file = await readFile(resolve(RESOURCES_DIR, relative));
     const source = new Uint8Array(file.buffer, file.byteOffset, file.byteLength);
     const before = parseNus3Bank(source);
     const beforeTone = selectPlayableTone(before, stem)!.tone;

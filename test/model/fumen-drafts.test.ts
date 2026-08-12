@@ -18,10 +18,9 @@ import {
 } from '../../src/model/fumenDrafts';
 import { canEditMeasureDuration, setMeasureDuration } from '../../src/model/fumenEdits';
 import { measureTimings } from '../../src/model/fumenTiming';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
+const FUMEN_DIR = resolve(CHN_X64, 'fumen');
 
 async function loadChart(rel: string): Promise<Fumen> {
   const buf = await readFile(resolve(FUMEN_DIR, rel));

@@ -16,10 +16,9 @@ import {
   fumenNoteTypeLabel,
   isKnownNoteType,
 } from '../../src/codec/fumen/types';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
+const FUMEN_DIR = resolve(CHN_X64, 'fumen');
 
 async function* walkBins(root: string): AsyncGenerator<string> {
   for (const ent of await readdir(root, { withFileTypes: true })) {

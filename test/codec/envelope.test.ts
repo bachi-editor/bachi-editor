@@ -3,10 +3,9 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { openEnvelope, sealEnvelope } from '../../src/codec/envelope';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const DATATABLE_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/datatable');
+const DATATABLE_DIR = resolve(CHN_X64, 'datatable');
 
 async function load(p: string): Promise<Uint8Array> {
   const buf = await readFile(p);
@@ -63,7 +62,7 @@ describe.skipIf(!HAS_CORPUS)('envelope against real CHN datatable files', () => 
 
 describe.skipIf(!HAS_CORPUS)('envelope against real CHN fumen files', () => {
   test('decrypts a sample fumen and dumps the first 64 bytes for inspection', async () => {
-    const fumenPath = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin');
+    const fumenPath = resolve(CHN_X64, 'fumen/10binz/10binz_e.bin');
     const bytes = await load(fumenPath);
     const { payload } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     expect(payload.length).toBeGreaterThan(16);
@@ -74,7 +73,7 @@ describe.skipIf(!HAS_CORPUS)('envelope against real CHN fumen files', () => {
   });
 
   test('fumen payload round-trip recovers byte-identical bytes', async () => {
-    const fumenPath = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin');
+    const fumenPath = resolve(CHN_X64, 'fumen/10binz/10binz_e.bin');
     const bytes = await load(fumenPath);
     const { payload, iv } = await openEnvelope(bytes, FUMEN_KEY_HEX);
     const reSealed = await sealEnvelope(payload, FUMEN_KEY_HEX, iv);

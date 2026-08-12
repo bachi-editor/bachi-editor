@@ -6,10 +6,9 @@ import { encodeFumen } from '../../src/codec/fumen/encode';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
 import { DUMPS, walkBins } from '../helpers/dumps';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
+const FUMEN_DIR = resolve(CHN_X64, 'fumen');
 
 async function decryptedPayload(p: string): Promise<Uint8Array> {
   const buf = await readFile(p);

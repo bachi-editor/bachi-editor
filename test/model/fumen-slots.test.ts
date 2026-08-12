@@ -22,9 +22,8 @@ import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
 import { makeFumenHeader } from '../../src/codec';
 import type { Fumen } from '../../src/codec';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
 
 function emptyFumen(): Fumen {
   return { header: makeFumenHeader(), measures: [], trailer: new Uint8Array(0) };
@@ -103,7 +102,7 @@ describe('collect created/removed', () => {
 
 describe.skipIf(!HAS_CORPUS)('cloneFumen', () => {
   test('produces a byte-identical but independent copy of a real chart', async () => {
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_m.bin'));
+    const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_m.bin'));
     const { payload } = await openEnvelope(
       new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength),
       FUMEN_KEY_HEX,

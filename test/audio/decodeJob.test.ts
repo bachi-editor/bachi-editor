@@ -3,10 +3,9 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { runDecodeJob } from '../../src/audio/decodeJob';
 import { loadTestG719Wasm } from '../helpers/g719';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
+const SOUND_DIR = resolve(CHN_X64, 'sound');
 
 async function loadBytes(name: string): Promise<Uint8Array> {
   const buf = await readFile(resolve(SOUND_DIR, name));

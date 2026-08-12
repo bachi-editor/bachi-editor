@@ -19,31 +19,16 @@ import {
   playheadGeometry,
   STAVE_SNAP_INSET,
 } from '../../src/ui/fumen/scoreLayout';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const FIXTURE = path.resolve(
-  __dirname,
-  '../../../resources/TaikoCHN/Data/x64/fumen/10binz/10binz_m.bin',
-);
-const SWEEP1_URA_FIXTURE = path.resolve(
-  __dirname,
-  '../../../resources/TaikoCHN/Data/x64/fumen/sweep1/sweep1_x.bin',
-);
+const FIXTURE = path.resolve(CHN_X64, 'fumen/10binz/10binz_m.bin');
+const SWEEP1_URA_FIXTURE = path.resolve(CHN_X64, 'fumen/sweep1/sweep1_x.bin');
 // doncam: extreme gimmick chart, 286 measures most far shorter than 4 beats.
-const DONCAM_FIXTURE = path.resolve(
-  __dirname,
-  '../../../resources/TaikoCHN/Data/x64/fumen/doncam/doncam_m.bin',
-);
+const DONCAM_FIXTURE = path.resolve(CHN_X64, 'fumen/doncam/doncam_m.bin');
 // butou6: 4/4 body with a 1-beat pickup measure 0 and a 281 ms intro offset.
-const BUTOU6_FIXTURE = path.resolve(
-  __dirname,
-  '../../../resources/TaikoCHN/Data/x64/fumen/butou6/butou6_m.bin',
-);
+const BUTOU6_FIXTURE = path.resolve(CHN_X64, 'fumen/butou6/butou6_m.bin');
 // cls10: opens at 160 BPM with a 537 ms offset.
-const CLS10_FIXTURE = path.resolve(
-  __dirname,
-  '../../../resources/TaikoCHN/Data/x64/fumen/cls10/cls10_m.bin',
-);
+const CLS10_FIXTURE = path.resolve(CHN_X64, 'fumen/cls10/cls10_m.bin');
 
 function makeNote(type: number, position = 0, duration = 0, scoreInit = 0): FumenNote {
   return { type, position, item: 0, padding: 0, scoreInit, scoreDiff: 0, duration };

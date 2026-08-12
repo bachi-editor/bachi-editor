@@ -6,10 +6,9 @@ import { encodeHeader } from '../../src/codec/fumen/header';
 import { DRUMROLL_NOTE_TYPES, FUMEN_NOTE_TYPE_NAMES } from '../../src/codec/fumen/types';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
+const FUMEN_DIR = resolve(CHN_X64, 'fumen');
 
 async function* walkBins(root: string): AsyncGenerator<string> {
   const entries = await readdir(root, { withFileTypes: true });

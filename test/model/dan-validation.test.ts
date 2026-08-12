@@ -9,9 +9,7 @@ import {
   type DanEntry,
   type OdaiBorder,
 } from '../../src/codec/serverdata';
-import { HAS_SERVER_DATA } from '../helpers/resources';
-
-const DATA = resolvePath(__dirname, '../../..', 'resources/TaikoLocalServer-dev/Host/wwwroot/data');
+import { HAS_SERVER_DATA, SERVER_DATA_DIR as DATA } from '../helpers/resources';
 
 function border(odaiType: number, borderType: number): OdaiBorder {
   return {

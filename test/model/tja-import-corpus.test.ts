@@ -1,12 +1,9 @@
 import { readdir, readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { verifyEncoderSelfConsistent } from '../../src/codec';
 import { validateFumenChart } from '../../src/model/fumenValidation';
 import { convertTjaForImport, decodeTjaBytes } from '../../src/model/tjaImport';
-import { HAS_TJA_CORPUS } from '../helpers/resources';
-
-const ESE_ROOT = fileURLToPath(new URL('../../../resources/ese/', import.meta.url));
+import { HAS_TJA_CORPUS, TJA_CORPUS_DIR as ESE_ROOT } from '../helpers/resources';
 
 async function tjaFiles(directory: string): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });

@@ -3,14 +3,12 @@ import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
 import { parseDanConfig, serializeDanConfig } from '../../src/codec/serverdata/danData';
 import { BORDER_TYPE_ALL, BORDER_TYPE_PER_SONG, EXPECTED_ODAI_SONGS } from '../../src/codec/serverdata/types';
-import { HAS_SERVER_DATA } from '../helpers/resources';
+import { HAS_SERVER_DATA, SERVER_DATA_DIR } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const DATA = resolve(REPO, 'resources/TaikoLocalServer-dev/Host/wwwroot/data');
 const FILES = ['dan_data.json', 'gaiden_data.json'];
 
 async function readText(name: string): Promise<string> {
-  return readFile(resolve(DATA, name), 'utf8');
+  return readFile(resolve(SERVER_DATA_DIR, name), 'utf8');
 }
 
 describe.skipIf(!HAS_SERVER_DATA)('dani config codec', () => {

@@ -3,11 +3,10 @@ import { resolve } from 'node:path';
 import { describe, test } from 'vitest';
 import { openEnvelope } from '../../src/codec/envelope';
 import { FUMEN_KEY_HEX } from '../helpers/keys';
-
-const REPO = resolve(__dirname, '../../..');
+import { CHN_X64 } from '../helpers/resources';
 
 async function loadAndDecrypt(rel: string): Promise<Uint8Array> {
-  const buf = await readFile(resolve(REPO, rel));
+  const buf = await readFile(resolve(CHN_X64, rel));
   const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
   return payload;
 }
@@ -32,10 +31,10 @@ function u16(bytes: Uint8Array, off: number): number {
 describe.skip('fumen byte inspection (run with --include for one-off RE)', () => {
   test('dump header of multiple difficulties of 10binz', async () => {
     const samples = [
-      'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin',
-      'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin',
-      'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_h.bin',
-      'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_m.bin',
+      'fumen/10binz/10binz_e.bin',
+      'fumen/10binz/10binz_n.bin',
+      'fumen/10binz/10binz_h.bin',
+      'fumen/10binz/10binz_m.bin',
     ];
     for (const s of samples) {
       const p = await loadAndDecrypt(s);
@@ -65,7 +64,7 @@ describe.skip('fumen byte inspection (run with --include for one-off RE)', () =>
   });
 
   test('dump first 1024 bytes of a failing file (1psovt_e)', async () => {
-    const p = await loadAndDecrypt('resources/TaikoCHN/Data/x64/fumen/1psovt/1psovt_e.bin');
+    const p = await loadAndDecrypt('fumen/1psovt/1psovt_e.bin');
     // eslint-disable-next-line no-console
     console.log(`\n=== 1psovt_e (size ${p.length}) ===`);
     for (let off = 0; off < 1024; off += 16) {
@@ -78,7 +77,7 @@ describe.skip('fumen byte inspection (run with --include for one-off RE)', () =>
   });
 
   test('dump bytes 520..720 for 10binz_e (start of first measures)', async () => {
-    const p = await loadAndDecrypt('resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin');
+    const p = await loadAndDecrypt('fumen/10binz/10binz_e.bin');
     // eslint-disable-next-line no-console
     console.log(`\n=== first measures of 10binz_e (size ${p.length}) ===`);
     for (let off = 520; off < 920; off += 16) {
@@ -97,13 +96,13 @@ describe.skip('fumen byte inspection (run with --include for one-off RE)', () =>
 
   test('write decrypted payloads to /tmp for manual inspection', async () => {
     const samples = [
-      ['10binz_e', 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_e.bin'],
-      ['10binz_n', 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'],
-      ['10binz_h', 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_h.bin'],
-      ['10binz_m', 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_m.bin'],
-      ['1psovt_e', 'resources/TaikoCHN/Data/x64/fumen/1psovt/1psovt_e.bin'],
-      ['20tbc_e', 'resources/TaikoCHN/Data/x64/fumen/20tbc/20tbc_e.bin'],
-      ['20tftr_h', 'resources/TaikoCHN/Data/x64/fumen/20tftr/20tftr_h.bin'],
+      ['10binz_e', 'fumen/10binz/10binz_e.bin'],
+      ['10binz_n', 'fumen/10binz/10binz_n.bin'],
+      ['10binz_h', 'fumen/10binz/10binz_h.bin'],
+      ['10binz_m', 'fumen/10binz/10binz_m.bin'],
+      ['1psovt_e', 'fumen/1psovt/1psovt_e.bin'],
+      ['20tbc_e', 'fumen/20tbc/20tbc_e.bin'],
+      ['20tftr_h', 'fumen/20tftr/20tftr_h.bin'],
     ];
     for (const [name, path] of samples) {
       const p = await loadAndDecrypt(path);

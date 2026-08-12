@@ -22,7 +22,7 @@ import type { AssetInventory } from '../../src/fs/inventory';
 import type { FumenSlot } from '../../src/fs/fumens';
 import type { ProjectRoot } from '../../src/fs/project';
 import type { Fumen } from '../../src/codec';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
 const SONG_ID = 'aaa';
 const SLOT: FumenSlot = { filename: 'aaa_m.bin', difficulty: 'oni', player: 'single' };
@@ -32,8 +32,7 @@ let basePayload: Uint8Array;
 let baseFumen: Fumen;
 
 beforeAll(async () => {
-  const REPO = resolve(__dirname, '../../..');
-  const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_m.bin'));
+  const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_m.bin'));
   const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
   basePayload = payload;
   baseFumen = decodeFumen(payload);
