@@ -1038,17 +1038,25 @@ export const messages = {
     'zh-Hans': '试听、替换与转换乐曲音源，并可对照实时波形设置试听起点。',
     'zh-Hant': '試聽、替換與轉換樂曲音源，並可對照即時波形設定試聽起點。',
   },
-  'about.releaseTitle': {
-    en: 'Version & changelog', ja: 'バージョンと更新履歴',
-    'zh-Hans': '版本与更新日志', 'zh-Hant': '版本與更新日誌',
-  },
-  'about.currentVersion': {
-    en: 'Current version', ja: '現在のバージョン',
-    'zh-Hans': '当前版本', 'zh-Hant': '目前版本',
-  },
   'about.changelogTitle': {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
+  },
+  'about.release.0_0_3.title': {
+    en: 'About dialog layout', ja: '「Bachi について」のレイアウト',
+    'zh-Hans': '“关于”对话框布局', 'zh-Hant': '「關於」對話框版面',
+  },
+  'about.release.0_0_3.version': {
+    en: 'The current version now sits beside the About title instead of in a box of its own.',
+    ja: '現在のバージョンを独立した枠ではなく、「Bachi について」のタイトル横に表示するようにしました。',
+    'zh-Hans': '当前版本不再单独占一个方框，改为显示在“关于”标题旁。',
+    'zh-Hant': '目前版本不再單獨佔一個方框，改為顯示在「關於」標題旁。',
+  },
+  'about.release.0_0_3.changelog': {
+    en: 'The changelog page gives its full height to the release list, so fewer entries are hidden behind a scrollbar.',
+    ja: '更新履歴のページ全体をリリース一覧に使うようにしました。スクロールで隠れる項目が少なくなります。',
+    'zh-Hans': '更新日志页面的整块高度都留给版本列表，被滚动条隐藏的条目更少。',
+    'zh-Hant': '更新日誌頁面的整塊高度都留給版本列表，被捲動軸隱藏的項目更少。',
   },
   'about.release.0_0_2.title': {
     en: 'Song-list controls', ja: '楽曲リストの操作',
