@@ -8,10 +8,9 @@ import {
   selectPlayableTone,
 } from '../../src/codec';
 import { loadTestG719Wasm } from '../helpers/g719';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const SOUND_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/sound');
+const SOUND_DIR = resolve(CHN_X64, 'sound');
 
 async function loadBnsfStream(name: string) {
   const buf = await readFile(resolve(SOUND_DIR, name));

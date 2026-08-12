@@ -29,10 +29,9 @@ import {
 import { measureTimings } from '../../src/model/fumenTiming';
 import { cloneFumen } from '../../src/model/fumenSlots';
 import type { Fumen } from '../../src/codec';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const FUMEN_DIR = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen');
+const FUMEN_DIR = resolve(CHN_X64, 'fumen');
 
 async function loadChart(rel: string): Promise<{ payload: Uint8Array; fumen: Fumen }> {
   const buf = await readFile(resolve(FUMEN_DIR, rel));

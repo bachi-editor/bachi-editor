@@ -15,7 +15,7 @@ import { decodeFumen } from '../../src/codec/fumen/decode';
 import { openEnvelope } from '../../src/codec/envelope';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from '../helpers/keys';
 import { detectJsonTextStyle, formatJsonText, readNus3BankDemoStartMs, type Fumen } from '../../src/codec';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
 Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
 
@@ -140,8 +140,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
     // Save an edited version of a real chart into fumen/aaa/aaa_m.bin.
-    const REPO = resolve(__dirname, '../../..');
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'));
+    const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_n.bin'));
     const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
     const original = decodeFumen(payload);
 
@@ -178,8 +177,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
   test.skipIf(!HAS_CORPUS)('writes sound-bank demo-start metadata without creating extra files', async () => {
     const base = baselineTables();
     const { root, sound } = await seedRoot(base);
-    const REPO = resolve(__dirname, '../../..');
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/sound/song_10binz.nus3bank'));
+    const buf = await readFile(resolve(CHN_X64, 'sound/song_10binz.nus3bank'));
     const original = new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
     sound.children.set('song_aaa.nus3bank', new MemFile('song_aaa.nus3bank', original));
 
@@ -197,8 +195,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
   test.skipIf(!HAS_CORPUS)('a chart whose header measure count is corrupt aborts the save with nothing written', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
-    const REPO = resolve(__dirname, '../../..');
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'));
+    const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_n.bin'));
     const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
     const original = decodeFumen(payload);
 
@@ -223,8 +220,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
   test.skipIf(!HAS_CORPUS)('writes created chart files without sidecars and reports createdFumens', async () => {
     const base = baselineTables();
     const { root, fumen } = await seedRoot(base);
-    const REPO = resolve(__dirname, '../../..');
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'));
+    const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_n.bin'));
     const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
     const uraChart = decodeFumen(payload);
 
@@ -326,8 +322,7 @@ describe('saveDatatables — delete-song asset cleanup', () => {
 // every other slot — and every other file — byte-for-byte untouched.)
 describe.skipIf(!HAS_CORPUS)('saveDatatables — unchanged charts are never written (Phase 7.3)', () => {
   async function realChart(): Promise<Fumen> {
-    const REPO = resolve(__dirname, '../../..');
-    const buf = await readFile(resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/10binz/10binz_n.bin'));
+    const buf = await readFile(resolve(CHN_X64, 'fumen/10binz/10binz_n.bin'));
     const { payload } = await openEnvelope(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength), FUMEN_KEY_HEX);
     return decodeFumen(payload);
   }

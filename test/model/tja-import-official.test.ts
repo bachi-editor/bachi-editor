@@ -9,12 +9,11 @@ import { measureTimings } from '../../src/model/fumenTiming';
 import { convertTjaForImport, decodeTjaBytes, shinutiPatch } from '../../src/model/tjaImport';
 import { SHINUCHI_ABSENT } from '../../src/model/shinuchi';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX } from '../helpers/keys';
-import { HAS_CORPUS } from '../helpers/resources';
+import { CHN_X64, HAS_CORPUS, TJA_CORPUS_DIR } from '../helpers/resources';
 
-const REPO = resolve(__dirname, '../../..');
-const ESE_TJA = resolve(REPO, 'resources/ese/01 Pop/365 Nichi no Kamihikouki/365 Nichi no Kamihikouki.tja');
-const OFFICIAL = resolve(REPO, 'resources/TaikoCHN/Data/x64/fumen/akb365');
-const MUSICINFO = resolve(REPO, 'resources/TaikoCHN/Data/x64/datatable/musicinfo.bin');
+const ESE_TJA = resolve(TJA_CORPUS_DIR, '01 Pop/365 Nichi no Kamihikouki/365 Nichi no Kamihikouki.tja');
+const OFFICIAL = resolve(CHN_X64, 'fumen/akb365');
+const MUSICINFO = resolve(CHN_X64, 'datatable/musicinfo.bin');
 const SUFFIX = { easy: 'e', normal: 'n', hard: 'h', oni: 'm', ura: 'x' } as const;
 
 function baseNoteType(type: number): number {
