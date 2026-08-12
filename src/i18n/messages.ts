@@ -1050,6 +1050,16 @@ export const messages = {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
   },
+  'about.release.0_0_2.title': {
+    en: 'Song-list controls', ja: '楽曲リストの操作',
+    'zh-Hans': '歌曲列表控件', 'zh-Hant': '歌曲列表控制項',
+  },
+  'about.release.0_0_2.filterButton': {
+    en: 'The song filter button is now a compact icon, so the filter and sort controls fit on one line in every language.',
+    ja: '楽曲フィルターのボタンをアイコンのみにしました。すべての言語でフィルターと並べ替えの操作が 1 行に収まります。',
+    'zh-Hans': '歌曲筛选按钮改为紧凑图标，筛选与排序控件在所有语言下均可显示在同一行。',
+    'zh-Hant': '歌曲篩選按鈕改為精簡圖示，篩選與排序控制項在所有語言下均可顯示在同一行。',
+  },
   'about.release.0_0_1.title': {
     en: 'Song-list sorting', ja: '楽曲リストの並べ替え',
     'zh-Hans': '歌曲列表排序', 'zh-Hant': '歌曲列表排序',
@@ -1406,7 +1416,6 @@ export const messages = {
   },
   'songlist.searchAria': { en: 'Search songs', ja: '楽曲を検索', 'zh-Hans': '搜索歌曲', 'zh-Hant': '搜尋歌曲' },
   'songlist.clearSearch': { en: 'Clear search', ja: '検索をクリア', 'zh-Hans': '清除搜索', 'zh-Hant': '清除搜尋' },
-  'songlist.filters': { en: 'Filters', ja: 'フィルター', 'zh-Hans': '筛选', 'zh-Hant': '篩選' },
   'songlist.chooseFilters': {
     en: 'Choose song filters', ja: '楽曲フィルターを選択',
     'zh-Hans': '选择歌曲筛选', 'zh-Hant': '選擇歌曲篩選',

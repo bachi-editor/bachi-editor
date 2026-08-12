@@ -9,11 +9,15 @@ interface MenuProps {
   trigger: ReactNode;
   triggerClassName?: string;
   triggerTitle?: string;
+  /** Accessible name, for triggers whose content is an icon or a bare number. */
+  triggerAriaLabel?: string;
   minWidth?: number;
   children: (close: () => void) => ReactNode;
 }
 
-export function Menu({ trigger, triggerClassName, triggerTitle, minWidth, children }: MenuProps) {
+export function Menu({
+  trigger, triggerClassName, triggerTitle, triggerAriaLabel, minWidth, children,
+}: MenuProps) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const close = () => setOpen(false);
@@ -40,6 +44,7 @@ export function Menu({ trigger, triggerClassName, triggerTitle, minWidth, childr
         type="button"
         className={triggerClassName}
         title={triggerTitle}
+        aria-label={triggerAriaLabel}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}

@@ -125,8 +125,8 @@
 
 /* ── Song list ───────────────────────────────────────── */
 .tk-songs {
-  /* Wide enough that the controls row (Filters + the ja "並べ替え" sort label +
-     segmented buttons) stays on one line. */
+  /* Sized for the list rows (title + metadata line), not the controls row: that
+     row now fits every locale on one line with room to spare. */
   width: 316px; flex: 0 0 316px;
   background: var(--panel);
   border-right: 1px solid var(--line);
@@ -159,8 +159,11 @@
 .tk-song-controls { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:9px; }
 .tk-filter-control { display:flex; min-width:0; }
 .tk-filter-control .tk-menu { left:0; right:auto; }
+/* Icon-only: a translated word here ("フィルター") is the one label long enough to
+   blow out the controls row, and the funnel plus the tags in the search field
+   already say what it does. The name lives on title/aria-label instead. */
 .tk-filter-trigger {
-  display:inline-flex; align-items:center; gap:5px; min-height:28px; padding:5px 8px; border:1px solid var(--line-2);
+  display:inline-flex; align-items:center; gap:4px; min-height:28px; padding:5px 7px; border:1px solid var(--line-2);
   border-radius:var(--r-sm); background:var(--panel); color:var(--ink-2); font-family:var(--ui); font-size:11.5px; font-weight:600; cursor:pointer;
 }
 .tk-filter-trigger:hover { background:var(--panel-2); border-color:var(--ink-4); }
