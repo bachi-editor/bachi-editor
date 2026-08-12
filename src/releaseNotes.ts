@@ -1,6 +1,11 @@
 // Release metadata shown in the About dialog. `package.json` owns the current
 // application version; this list owns the dated history and points into the
 // normal four-locale UI catalog for every piece of visible copy.
+//
+// To cut a release, bump with `npm version <next> --no-git-tag-version` so
+// package.json and package-lock.json move together, then add the entry at the
+// top of RELEASE_NOTES. Editing package.json by hand is what left the lockfile
+// stranded on 0.0.1 for two releases.
 
 import packageMetadata from '../package.json';
 import type { MessageKey } from './i18n/messages';
