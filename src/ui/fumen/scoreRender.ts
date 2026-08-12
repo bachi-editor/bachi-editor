@@ -315,7 +315,7 @@ function drawNoteText(
   const recommendation = input.recommendations.get(noteLayout.note);
   const mismatch = recommendation !== undefined && recommendation !== noteLayout.note.type;
   const radius = noteHeadRadius(big, noteScale);
-  const fontSize = (big ? 8 : 10) * noteScale;
+  const fontSize = (big ? 6.4 : 8) * noteScale;
 
   ctx.save();
   ctx.fillStyle = mismatch ? COLORS.warningText : COLORS.text;
