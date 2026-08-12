@@ -8,7 +8,13 @@
 name: CI
 
 on:
+  # `labeled`/`unlabeled` are here for the version guard's escape hatch. Re-running
+  # a workflow replays the original event payload, so a pull request labelled after
+  # the fact would stay red no matter how often it was re-run; the label has to be
+  # its own trigger. The cost is a full re-run on any label change, which is a
+  # couple of minutes on a project this size.
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   workflow_dispatch:
 
 permissions:
@@ -49,10 +55,24 @@ jobs:
       # This composes with the release-info test: bumping package.json forces a
       # matching changelog entry and lockfile version, so one guard cannot be
       # satisfied by defeating the other.
+      #
+      # The `no-release` label opts a pull request out, for internal changes with
+      # nothing user-visible to put in a changelog. It is deliberately a label
+      # rather than a commit-message trailer: it shows up in the pull request
+      # header, and applying it is a reviewable act rather than a detail buried
+      # in a commit.
       - name: Require a version bump for app changes
         env:
           BASE: ${{ github.base_ref }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
         run: |
+          case ",$LABELS," in
+            *,no-release,*)
+              echo "Labelled no-release — version bump not required."
+              exit 0
+              ;;
+          esac
+
           git fetch --no-tags --quiet origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
 
           if git diff --quiet "origin/$BASE...HEAD" -- src index.html public; then
@@ -64,7 +84,7 @@ jobs:
           head_version=$(node -pe 'require("./package.json").version')
 
           if [ "$base_version" = "$head_version" ]; then
-            echo "::error file=package.json::App files changed but the version is still $head_version. Run 'npm version <next> --no-git-tag-version', then add a release note in src/releaseNotes.ts."
+            echo "::error file=package.json::App files changed but the version is still $head_version. Run 'npm version <next> --no-git-tag-version', then add a release note in src/releaseNotes.ts. If nothing here is user-visible, label the pull request 'no-release' instead."
             exit 1
           fi
 
