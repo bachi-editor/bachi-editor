@@ -4,9 +4,12 @@
 // as the permanent version, changelog, and credits page.
 //
 // Below the header sits a three-page horizontal gallery: what Bachi does, the
-// current release history, then who it is built on. Every page stays mounted so
-// the slide animation has something to move; only the visible one is exposed to
+// changelog, then who it is built on. Every page stays mounted so the slide
+// animation has something to move; only the visible one is exposed to
 // assistive tech.
+//
+// The running version is a small suffix on the welcome heading rather than a
+// row of its own, which leaves the whole changelog page to the release list.
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useAppStore } from '../model/store';
@@ -43,7 +46,10 @@ export function AboutDialog() {
         <div className="tk-about-head">
           <BrandMark size={40} />
           <div className="tk-about-headtext">
-            <h2>{t('about.welcome')}</h2>
+            <h2>
+              {t('about.welcome')}
+              <span className="tk-about-ver">v{APP_VERSION}</span>
+            </h2>
             <p>{t('about.intro')}</p>
           </div>
         </div>
@@ -74,12 +80,7 @@ export function AboutDialog() {
               </ul>
             </GalleryPage>
 
-            <GalleryPage hidden={page !== 1} title={t('about.releaseTitle')}>
-              <div className="tk-about-version">
-                <span>{t('about.currentVersion')}</span>
-                <strong>v{APP_VERSION}</strong>
-              </div>
-              <div className="tk-about-changelog-title">{t('about.changelogTitle')}</div>
+            <GalleryPage hidden={page !== 1} title={t('about.changelogTitle')} className="tk-about-page-rel">
               <div className="tk-about-changelog">
                 {RELEASE_NOTES.map((release) => (
                   <article className="tk-about-release" key={release.version}>
@@ -164,9 +165,12 @@ export function AboutDialog() {
   );
 }
 
-function GalleryPage({ hidden, title, children }: { hidden: boolean; title: string; children: ReactNode }) {
+function GalleryPage(
+  { hidden, title, className, children }:
+  { hidden: boolean; title: string; className?: string; children: ReactNode },
+) {
   return (
-    <section className="tk-about-page" aria-hidden={hidden}>
+    <section className={'tk-about-page' + (className ? ` ${className}` : '')} aria-hidden={hidden}>
       <h3>{title}</h3>
       {children}
     </section>

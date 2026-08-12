@@ -892,7 +892,11 @@
 .tk-about-modal { width:660px; }
 .tk-about-head { display:flex; align-items:flex-start; gap:16px; padding:22px 24px 16px; }
 .tk-about-head .tk-brand-mark { flex:0 0 auto; margin-top:2px; }
-.tk-about-headtext h2 { margin:0; font-size:20px; font-weight:700; letter-spacing:-0.2px; }
+.tk-about-headtext h2 {
+  margin:0; display:flex; align-items:baseline; flex-wrap:wrap; gap:8px;
+  font-size:20px; font-weight:700; letter-spacing:-0.2px;
+}
+.tk-about-ver { font-family:var(--mono); font-size:12px; font-weight:500; color:var(--ink-3); letter-spacing:0; }
 .tk-about-headtext p { margin:7px 0 0; font-size:13px; line-height:1.55; color:var(--ink-2); }
 .tk-about-warning {
   display:flex; gap:12px; margin:0 24px; padding:13px 15px;
@@ -934,18 +938,13 @@
   display:block; margin-top:2px; font-size:12.5px; line-height:1.45; color:var(--ink-3);
 }
 
-.tk-about-version {
-  display:flex; align-items:center; justify-content:space-between; gap:16px;
-  margin-bottom:13px; padding:11px 13px; border:1px solid var(--line); border-radius:var(--r);
-  background:var(--panel-2);
-}
-.tk-about-version span { font-size:12.5px; color:var(--ink-3); }
-.tk-about-version strong { font-family:var(--mono); font-size:15px; color:var(--accent); }
-.tk-about-changelog-title {
-  margin-bottom:8px; font-size:11px; font-weight:700; letter-spacing:.5px;
-  text-transform:uppercase; color:var(--ink-3);
-}
-.tk-about-changelog { max-height:142px; padding-right:7px; overflow-y:auto; }
+/* The changelog page hands its whole body to the scroller so the release list
+   fills the gallery instead of stopping short. `flex:1 1 0` also keeps the list
+   out of the track's height calculation: the other two pages decide how tall
+   the gallery is, and the changelog scrolls inside whatever that leaves. */
+.tk-about-page-rel { display:flex; flex-direction:column; }
+.tk-about-page-rel .tk-about-changelog { flex:1 1 0; min-height:0; }
+.tk-about-changelog { padding-right:7px; overflow-y:auto; }
 .tk-about-release + .tk-about-release { margin-top:12px; padding-top:12px; border-top:1px solid var(--line); }
 .tk-about-release-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
 .tk-about-release-head strong { font-size:13px; font-weight:650; color:var(--ink); }
