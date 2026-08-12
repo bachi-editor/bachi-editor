@@ -1,0 +1,71 @@
+# Pull-request gate. Until this existed the only CI was deploy-pages.yml, which
+# runs on push to main — so every check happened after the merge, and a red
+# branch was found by the deploy, not by the review.
+#
+# The build steps mirror the release gates in deploy-pages.yml. Keep them in
+# step: a PR that passes here should not be able to fail the publish.
+
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A force-push supersedes whatever was running for the same ref.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The version guard diffs against the base branch, which a shallow
+          # clone does not carry.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The suite skips its corpus-backed suites here — the game dumps, AES
+      # keys, and G.719 modules are deliberately absent from CI.
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      # Shipping an app change under a version that is already published makes
+      # the About dialog lie about what the user is running. Only app surfaces
+      # count, so tooling- and docs-only pull requests are unaffected.
+      #
+      # This composes with the release-info test: bumping package.json forces a
+      # matching changelog entry and lockfile version, so one guard cannot be
+      # satisfied by defeating the other.
+      - name: Require a version bump for app changes
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          git fetch --no-tags --quiet origin "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+
+          if git diff --quiet "origin/$BASE...HEAD" -- src index.html public; then
+            echo "No app changes — version bump not required."
+            exit 0
+          fi
+
+          base_version=$(git show "origin/$BASE:package.json" | node -pe 'JSON.parse(require("fs").readFileSync(0, "utf8")).version')
+          head_version=$(node -pe 'require("./package.json").version')
+
+          if [ "$base_version" = "$head_version" ]; then
+            echo "::error file=package.json::App files changed but the version is still $head_version. Run 'npm version <next> --no-git-tag-version', then add a release note in src/releaseNotes.ts."
+            exit 1
+          fi
+
+          echo "Version $base_version -> $head_version"
