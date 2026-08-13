@@ -1080,6 +1080,40 @@ export const messages = {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
   },
+  'about.release.0_0_4.title': {
+    en: 'TJA import options', ja: 'TJAインポートの選択',
+    'zh-Hans': 'TJA 导入选项', 'zh-Hant': 'TJA 匯入選項',
+  },
+  'about.release.0_0_4.importParts': {
+    en: 'TJA import now lets you pick what to overwrite — metadata, chart files, the demo start — and remembers the choice for next time.',
+    ja: 'TJAのインポートで、上書きする対象（メタデータ・譜面ファイル・試聴開始位置）を選べるようになり、その選択を次回も引き継ぎます。',
+    'zh-Hans': 'TJA 导入现在可以选择要覆盖的内容（元数据、谱面文件、试听起点），并会记住上次的选择。',
+    'zh-Hant': 'TJA 匯入現在可以選擇要覆寫的內容（後設資料、譜面檔案、試聽起點），並會記住上次的選擇。',
+  },
+  'about.release.0_0_4.demoStart': {
+    en: 'A TJA’s DEMOSTART can now be written into the song’s sound bank, so song select previews from where the chart author intended. Import the audio first — that is where the game keeps the value.',
+    ja: 'TJAのDEMOSTARTを楽曲のサウンドバンクへ書き込めるようになり、曲選択の試聴が譜面作者の意図した位置から始まります。値はゲームがサウンドバンク内に保持するため、先に音源をインポートしてください。',
+    'zh-Hans': '现在可将 TJA 的 DEMOSTART 写入歌曲的音频库，选曲试听即从谱面作者设定的位置开始。请先导入音频——游戏正是把该值保存在音频库中。',
+    'zh-Hant': '現在可將 TJA 的 DEMOSTART 寫入歌曲的音訊庫，選曲試聽即從譜面作者設定的位置開始。請先匯入音訊——遊戲正是把該值儲存在音訊庫中。',
+  },
+  'about.release.0_0_4.timingArrows': {
+    en: 'BPM, branch, and scroll-speed badges now point at the stave with arrows of one length; the scroll-speed arrow is no longer hidden under its own badge.',
+    ja: 'BPM・譜面分岐・スクロール速度のラベルが、同じ長さの矢印で譜面を指すようになりました。スクロール速度の矢印がラベルに隠れることもなくなりました。',
+    'zh-Hans': 'BPM、谱面分歧和卷动速度标签现在以等长箭头指向谱面；卷动速度的箭头不再被自身标签遮住。',
+    'zh-Hant': 'BPM、譜面分歧和捲動速度標籤現在以等長箭頭指向譜面；捲動速度的箭頭不再被自身標籤遮住。',
+  },
+  'about.release.0_0_4.measureNumber': {
+    en: 'The measure number beside each row is centred on the staves instead of the badge band above them.',
+    ja: '各行の小節番号を、上部のラベル帯ではなく譜面に対して中央に配置しました。',
+    'zh-Hans': '每行左侧的小节编号改为相对谱面居中，而非相对上方的标签区域。',
+    'zh-Hant': '每列左側的小節編號改為相對譜面置中，而非相對上方的標籤區域。',
+  },
+  'about.release.0_0_4.noteText': {
+    en: 'The Japanese reading drawn on each note is smaller, so it sits inside the note head.',
+    ja: '音符に表示する読み仮名を小さくし、音符の中に収まるようにしました。',
+    'zh-Hans': '音符上显示的日文读法字号更小，可完整落在音符内。',
+    'zh-Hant': '音符上顯示的日文讀法字級更小，可完整落在音符內。',
+  },
   'about.release.0_0_3.title': {
     en: 'About dialog layout', ja: '「Bachi について」のレイアウト',
     'zh-Hans': '“关于”对话框布局', 'zh-Hant': '「關於」對話框版面',
