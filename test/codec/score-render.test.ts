@@ -248,3 +248,56 @@ describe('Japanese Don/Ka text overlay', () => {
     expect(hidden.textCalls.filter((call) => noteTexts.has(call.text))).toHaveLength(0);
   });
 });
+
+// A path-recording context: every point fed to the current path is kept, and a
+// fill() snapshots that path with the fill style in force. Enough to measure the
+// vertical extent of a filled shape (here: the row's measure-number chip).
+function makePathRecorder() {
+  const fills: { fillStyle: string; ys: number[] }[] = [];
+  let ys: number[] = [];
+  const point = (_x: number, y: number) => { ys.push(y); };
+  const ctx = {
+    save() {}, restore() {}, scale() {}, translate() {}, setTransform() {},
+    fillRect() {}, clearRect() {}, strokeRect() {}, arc() {}, setLineDash() {},
+    stroke() {}, fillText() {},
+    measureText: (text: string) => ({ width: text.length * 6 }),
+    beginPath() { ys = []; },
+    closePath() {},
+    moveTo: point,
+    lineTo: point,
+    quadraticCurveTo: (_cx: number, _cy: number, x: number, y: number) => point(x, y),
+    fill() { fills.push({ fillStyle: ctx.fillStyle, ys: [...ys] }); },
+    fillStyle: '',
+    strokeStyle: '',
+    lineWidth: 0,
+    font: '',
+    textAlign: 'left',
+    textBaseline: 'alphabetic',
+    globalAlpha: 1,
+  };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, fills };
+}
+
+/** Vertical midpoint of the row gutter's measure-number chip. */
+function gutterChipCenterY(layout: ReturnType<typeof layoutScore>): number {
+  const rec = makePathRecorder();
+  drawStatic(rec.ctx, layout, 2, '1/16', false);
+  const chip = rec.fills.find((f) => f.fillStyle === COLORS.gutterBg);
+  expect(chip).toBeDefined();
+  return (Math.min(...chip!.ys) + Math.max(...chip!.ys)) / 2;
+}
+
+describe('row gutter chip is centred on the stave centre line', () => {
+  it('centres on the single stave of a flat chart', () => {
+    const layout = layoutScore(makeFlatChart([120]), { contentWidth: 1200, measuresPerRow: 'auto' });
+    // The header band above the staves is badge space; the chip brackets the lane,
+    // so its midpoint lands on the centre line the notes sit on.
+    expect(gutterChipCenterY(layout)).toBeCloseTo(layout.measures[0].staveYs[0], 6);
+  });
+
+  it('centres on the middle stave of a branched chart', () => {
+    const layout = layoutScore(makeChart(1, 2), { contentWidth: 1200, measuresPerRow: 'auto' });
+    expect(layout.measures[0].branchCount).toBe(3);
+    expect(gutterChipCenterY(layout)).toBeCloseTo(layout.measures[0].staveYs[1], 6);
+  });
+});

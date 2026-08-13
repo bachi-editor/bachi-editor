@@ -165,10 +165,19 @@ import {
 import { validate, ValidationIssue, ValidationResult } from './validation';
 import { validateDirtyFumens, validateFumenChart } from './fumenValidation';
 import { DirtyFumenInput, DirtySoundBankInput, RemovedFumenInput, saveDatatables, SaveResult } from '../fs/write';
-import { removeSoundFile, replaceSoundFile, SoundWriteResult } from '../fs/sound';
+import {
+  readSoundBankBytes,
+  removeSoundFile,
+  replaceSoundFile,
+  resolveSoundFile,
+  SoundWriteResult,
+} from '../fs/sound';
+import { readNus3BankDemoStartMs } from '../codec';
 import {
   applyTjaImportMetadata,
+  DEFAULT_TJA_IMPORT_OPTIONS,
   importChartSlot,
+  type TjaImportOptions,
   type TjaImportResult,
 } from './tjaImport';
 
@@ -720,8 +729,13 @@ interface AppState {
   closeDeleteSong: () => void;
   openTjaImport: () => void;
   closeTjaImport: () => void;
-  /** Replace the selected song's full chart set and TJA-owned metadata in one undo step. */
-  importTja: (uniqueId: number, imported: TjaImportResult) => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Apply the chosen parts of a TJA — metadata, the full chart set, and/or the
+   *  sound bank's demo start — to the selected song in one undo step. */
+  importTja: (
+    uniqueId: number,
+    imported: TjaImportResult,
+    options?: TjaImportOptions,
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
 
   // ── Save ─────────────────────────────────────────────────
   openSaveDialog: (scope: SaveScope) => void;
@@ -2073,7 +2087,7 @@ export const useAppStore = create<AppState>((set, get) => {
     set({ ui: { ...state.ui, tjaImportOpen: true } });
   },
   closeTjaImport: () => set({ ui: { ...get().ui, tjaImportOpen: false } }),
-  importTja: async (uniqueId, imported) => {
+  importTja: async (uniqueId, imported, options = DEFAULT_TJA_IMPORT_OPTIONS) => {
     const initial = get();
     if (initial.project.kind !== 'open') return { ok: false, message: 'No project is open.' };
     const initialRow = initial.project.project.songs.byUniqueId.get(uniqueId);
@@ -2085,7 +2099,7 @@ export const useAppStore = create<AppState>((set, get) => {
     const desiredNames = new Set(desired.map(({ slot }) => slot.filename));
 
     let diskSlots = initial.songDiskSlots;
-    if (!diskSlots) {
+    if (options.charts && !diskSlots) {
       try {
         diskSlots = await listSongFumenSlots(initial.project.project.root, songId);
       } catch (error) {
@@ -2097,7 +2111,7 @@ export const useAppStore = create<AppState>((set, get) => {
     // diff floor. Load only desired disk slots that have not previously been
     // opened; files being removed do not need to be decoded.
     const loaded: { key: string; slot: FumenSlot; fumen: Fumen; bytes: Uint8Array }[] = [];
-    for (const slot of diskSlots) {
+    for (const slot of options.charts ? diskSlots ?? [] : []) {
       if (!desiredNames.has(slot.filename)) continue;
       const key = fumenKey(songId, slot.filename);
       if (initial.project.project.fumenBaselines.has(key)) continue;
@@ -2109,6 +2123,34 @@ export const useAppStore = create<AppState>((set, get) => {
           ok: false,
           message: `Could not read fumen/${songId}/${slot.filename}: ${error instanceof Error ? error.message : String(error)}`,
         };
+      }
+    }
+
+    // The demo start lives in the bank, not the chart: read the file's current
+    // value up front so the edit has a baseline to diff against, exactly as the
+    // Sound tab does. Without one the import would register a draft equal to its
+    // own baseline and quietly write nothing on save.
+    let demoStart: { key: string; filename: string; displayPath: string; stem: string; currentMs: number } | undefined;
+    if (options.demoStart && imported.demoStartMs !== undefined) {
+      const resolved = resolveSoundFile(initialRow.info);
+      const stem = resolved.filename.replace(/\.nus3bank$/i, '');
+      try {
+        const bytes = await readSoundBankBytes(initial.project.project.root, initialRow.info);
+        const currentMs = bytes ? readNus3BankDemoStartMs(bytes, stem) : undefined;
+        // No bank on disk, or one whose TONE record has no demo-start field: the
+        // value has nowhere to go, so the rest of the import proceeds without it.
+        // The dialog disables the option in that case, so this is the race only.
+        if (currentMs !== undefined) {
+          demoStart = {
+            key: soundMetadataKey(resolved.filename),
+            filename: resolved.filename,
+            displayPath: resolved.displayPath,
+            stem,
+            currentMs,
+          };
+        }
+      } catch {
+        // An unreadable or malformed bank is not worth failing the import over.
       }
     }
 
@@ -2127,49 +2169,99 @@ export const useAppStore = create<AppState>((set, get) => {
 
     try {
       const fumenBaselines = new Map(p.fumenBaselines);
-      for (const baseline of loaded) {
-        if (!fumenBaselines.has(baseline.key)) {
-          fumenBaselines.set(baseline.key, {
-            songId,
-            slot: baseline.slot,
-            fumen: baseline.fumen,
-            bytes: baseline.bytes,
-          });
+      // Everything the chart half of the import replaces. With charts unchecked
+      // all of it — pending chart operations, the open chart, the selection —
+      // stays exactly as the user left it.
+      let fumenDrafts = p.fumenDrafts;
+      let fumenCreated = p.fumenCreated;
+      let fumenRemoved = p.fumenRemoved;
+      let selection = current.selection;
+      let songSlots = current.songSlots;
+      let songDiskSlots = current.songDiskSlots;
+      let fumenState = current.fumen;
+      let chartState = current.chart;
+      let tab = current.ui.tab;
+
+      if (options.charts) {
+        for (const baseline of loaded) {
+          if (!fumenBaselines.has(baseline.key)) {
+            fumenBaselines.set(baseline.key, {
+              songId,
+              slot: baseline.slot,
+              fumen: baseline.fumen,
+              bytes: baseline.bytes,
+            });
+          }
         }
-      }
 
-      // Import owns the song's entire chart set. Clear all of its pending chart
-      // operations, then rebuild replacements/creations/removals against disk.
-      const keepOtherSong = (key: string) => !key.startsWith(`${songId}/`);
-      const fumenDrafts = new Map([...p.fumenDrafts].filter(([key]) => keepOtherSong(key)));
-      const fumenCreated = new Map([...p.fumenCreated].filter(([key]) => keepOtherSong(key)));
-      const fumenRemoved = new Map([...p.fumenRemoved].filter(([key]) => keepOtherSong(key)));
-      const diskNames = new Set(diskSlots.map((slot) => slot.filename));
+        // Import owns the song's entire chart set. Clear all of its pending chart
+        // operations, then rebuild replacements/creations/removals against disk.
+        const keepOtherSong = (key: string) => !key.startsWith(`${songId}/`);
+        const drafts = new Map([...p.fumenDrafts].filter(([key]) => keepOtherSong(key)));
+        const created = new Map([...p.fumenCreated].filter(([key]) => keepOtherSong(key)));
+        const removed = new Map([...p.fumenRemoved].filter(([key]) => keepOtherSong(key)));
+        const onDisk = diskSlots ?? [];
+        const diskNames = new Set(onDisk.map((slot) => slot.filename));
 
-      for (const { chart, slot } of desired) {
-        const key = fumenKey(songId, slot.filename);
-        if (diskNames.has(slot.filename)) {
-          fumenDrafts.set(key, chart.fumen);
-        } else {
-          fumenCreated.set(key, { songId, slot, fumen: chart.fumen });
+        for (const { chart, slot } of desired) {
+          const key = fumenKey(songId, slot.filename);
+          if (diskNames.has(slot.filename)) {
+            drafts.set(key, chart.fumen);
+          } else {
+            created.set(key, { songId, slot, fumen: chart.fumen });
+          }
         }
-      }
-      for (const slot of diskSlots) {
-        if (desiredNames.has(slot.filename)) continue;
-        const key = fumenKey(songId, slot.filename);
-        fumenRemoved.set(key, { songId, filename: slot.filename });
+        for (const slot of onDisk) {
+          if (desiredNames.has(slot.filename)) continue;
+          const key = fumenKey(songId, slot.filename);
+          removed.set(key, { songId, filename: slot.filename });
+        }
+
+        const nextSlots = sortFumenSlots(desired.map(({ slot }) => slot));
+        const preferred = nextSlots.find((slot) =>
+          slot.difficulty === current.selection.difficulty && slot.player === current.selection.player)
+          ?? nextSlots.find((slot) => slot.difficulty === current.selection.difficulty)
+          ?? nextSlots[0];
+        const selectedChart = desired.find(({ slot }) => slot.filename === preferred?.filename);
+        if (!preferred || !selectedChart) return { ok: false, message: 'The imported chart set is empty.' };
+        const selectedBytes = fumenBaselines.get(fumenKey(songId, preferred.filename))?.bytes ?? new Uint8Array(0);
+
+        fumenDrafts = drafts;
+        fumenCreated = created;
+        fumenRemoved = removed;
+        selection = { songId, difficulty: preferred.difficulty, player: preferred.player };
+        songSlots = nextSlots;
+        songDiskSlots = onDisk;
+        fumenState = {
+          kind: 'ready',
+          loaded: { ...preferred, songId, bytes: selectedBytes, fumen: selectedChart.chart.fumen },
+        };
+        chartState = { ...current.chart, selectedNote: undefined, selectedNotes: undefined, selectedMeasure: undefined, branchFocus: 'all' };
+        tab = 'chart';
       }
 
-      const datatables = applyTjaImportMetadata(p.datatables, uniqueId, songId, imported);
-      const songSlots = sortFumenSlots(desired.map(({ slot }) => slot));
-      const preferred = songSlots.find((slot) =>
-        slot.difficulty === current.selection.difficulty && slot.player === current.selection.player)
-        ?? songSlots.find((slot) => slot.difficulty === current.selection.difficulty)
-        ?? songSlots[0];
-      const selectedChart = desired.find(({ slot }) => slot.filename === preferred.filename);
-      if (!selectedChart) return { ok: false, message: 'The imported chart set is empty.' };
-      const selectedKey = fumenKey(songId, preferred.filename);
-      const selectedBytes = fumenBaselines.get(selectedKey)?.bytes ?? new Uint8Array(0);
+      // The demo start is a pending bank patch, not a datatable field: record the
+      // file's own value as the baseline, then draft the TJA's on top of it.
+      let soundMetadataBaselines = p.soundMetadataBaselines;
+      let soundMetadataDrafts = p.soundMetadataDrafts;
+      if (demoStart && imported.demoStartMs !== undefined) {
+        const baseline = p.soundMetadataBaselines.get(demoStart.key) ?? {
+          key: demoStart.key,
+          songId,
+          filename: demoStart.filename,
+          displayPath: demoStart.displayPath,
+          preferredStem: demoStart.stem,
+          demoStartMs: demoStart.currentMs,
+        };
+        soundMetadataBaselines = new Map(p.soundMetadataBaselines).set(demoStart.key, baseline);
+        soundMetadataDrafts = new Map(p.soundMetadataDrafts);
+        if (imported.demoStartMs === baseline.demoStartMs) soundMetadataDrafts.delete(demoStart.key);
+        else soundMetadataDrafts.set(demoStart.key, { ...baseline, demoStartMs: imported.demoStartMs });
+      }
+
+      const datatables = options.metadata
+        ? applyTjaImportMetadata(p.datatables, uniqueId, songId, imported)
+        : p.datatables;
 
       const nextProject: OpenProject = {
         ...p,
@@ -2179,25 +2271,19 @@ export const useAppStore = create<AppState>((set, get) => {
         fumenDrafts,
         fumenCreated,
         fumenRemoved,
+        soundMetadataBaselines,
+        soundMetadataDrafts,
         undo: pushHistory(p),
         redo: [],
       };
       set({
         project: { kind: 'open', project: nextProject },
-        selection: { songId, difficulty: preferred.difficulty, player: preferred.player },
-        songDiskSlots: diskSlots,
+        selection,
+        songDiskSlots,
         songSlots,
-        fumen: {
-          kind: 'ready',
-          loaded: {
-            ...preferred,
-            songId,
-            bytes: selectedBytes,
-            fumen: selectedChart.chart.fumen,
-          },
-        },
-        chart: { ...current.chart, selectedNote: undefined, selectedNotes: undefined, selectedMeasure: undefined, branchFocus: 'all' },
-        ui: { ...current.ui, tjaImportOpen: false, tab: 'chart' },
+        fumen: fumenState,
+        chart: chartState,
+        ui: { ...current.ui, tjaImportOpen: false, tab },
         save: { kind: 'idle' },
       });
       return { ok: true };

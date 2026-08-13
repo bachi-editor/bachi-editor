@@ -12,6 +12,8 @@ import {
   hitTestMeasure,
   hitTestNote,
   layoutScore,
+  MARKER_ARROW_SPAN,
+  MARKER_BADGE_HEIGHT,
   measureTimings,
   noteHeadRadius,
   noteTargetRadius,
@@ -435,6 +437,22 @@ describe('timing marker stacking', () => {
     expect(l1.arrowFromY).toBeGreaterThan(l0.arrowFromY);
   });
 
+  it('draws every arrow the same length, badge edge to stave anchor', () => {
+    // Measure 1 changes both BPM and speed, so the row carries a downward BPM
+    // arrow above the lane and an upward HS arrow below it.
+    const m0 = makeMeasureAt(0, 120);
+    const m1 = makeMeasureAt(2000, 180);
+    for (const b of m1.branches) b.speed = 2;
+    const layout = layoutScore(makeFumen([m0, m1]), { contentWidth: 1200 });
+
+    const bpm = markersOfKind(layout, 'bpm')[0];
+    const hs = markersOfKind(layout, 'hs')[0];
+    // The BPM badge sits above its anchor, the HS badge below it — both a full
+    // span away from the stave edge they point at, so the two arrows match.
+    expect(bpm.arrowToY - (bpm.badgeY + MARKER_BADGE_HEIGHT)).toBeCloseTo(MARKER_ARROW_SPAN, 5);
+    expect(hs.badgeY - hs.arrowToY).toBeCloseTo(MARKER_ARROW_SPAN, 5);
+  });
+
   it('BPM badges climb UP as their level rises', () => {
     // Alternating BPM every measure; constant 200 ms gaps keep them packed.
     const measures: FumenMeasure[] = [];
@@ -526,8 +544,9 @@ describe('per-branch scroll-speed badges reserve inter-stave space', () => {
 
   it('pushes the staves apart when a per-branch badge stack overflows the inter-stave gap', () => {
     const steady = layoutScore(makeFumen([makeMeasure([[], [makeNote(0x1)], []]), makeMeasure([[], [makeNote(0x1)], []])]), { contentWidth: 4000 });
-    // A single per-branch badge now fits within the (roomier) inter-stave gap; a
-    // dense, stacking run of them is what overflows it and pushes the staves apart.
+    // A per-branch badge hangs a full arrow span below its stave, so any of them
+    // overflows the inter-stave gap and pushes the staves apart; a dense, stacking
+    // run of them pushes them further still (next test).
     const changing = layoutScore(normalBranchZigzag(8, 100), { contentWidth: 4000, measuresPerRow: 'auto' });
     expect(gap01(changing)).toBeGreaterThan(gap01(steady));
   });

@@ -314,6 +314,19 @@ export const FIRST_NOTE_GUTTER_PAD = 24;
  */
 export const STAVE_SNAP_INSET = 4;
 
+/**
+ * Distance from a badge's near edge to its arrow's stave anchor — i.e. how long
+ * the connector is drawn. Every timing arrow uses it, so the BPM, branch and HS
+ * arrows all read the same length regardless of which side of the stave they sit
+ * on. The head stops `TIMING_POINTER_GAP - TIMING_ARROW_SIZE` short of the anchor,
+ * so the visible arrow is a couple of px shorter than this span.
+ */
+export const MARKER_ARROW_SPAN = 20;
+
+/** How far an HS badge's top hangs below the stave edge it points at: the arrow
+ *  span, less the part of it that reaches inside the stave (the snap inset). */
+const HS_BADGE_DROP = MARKER_ARROW_SPAN - STAVE_SNAP_INSET;
+
 function clamp01(value: number): number {
   if (value < 0) return 0;
   if (value > 1) return 1;
@@ -629,6 +642,10 @@ export function layoutScore(fumen: Fumen, config: Partial<LayoutConfig> = {}): S
   // Extra gap inserted below stave b — one slot per inter-stave gap (b in 0..count-2).
   const rowStaveExtra: number[][] = rowSpans.map(() => new Array(Math.max(0, branchCount - 1)).fill(0));
   const rowExtraBelow: number[] = rowSpans.map(() => 0);
+  // Full depth of the row's below-lane HS stack (0 when it has none). Unlike
+  // rowExtraBelow it counts the part absorbed by the row gap, so the LAST row —
+  // which has no gap under it — can still size the canvas around its badges.
+  const rowBelowLaneDepth: number[] = rowSpans.map(() => 0);
 
   for (let r = 0; cfg.showTimingMarkers && r < rowSpans.length; r++) {
     const span = rowSpans[r];
@@ -687,11 +704,13 @@ export function layoutScore(fumen: Fumen, config: Partial<LayoutConfig> = {}): S
       if (group) group.push(t);
       else hsGroups.set(key, [t]);
     }
-    // One badge height below the lane is absorbed by the row gap; only a deeper
-    // all-branch / last-branch stack pushes the row's bottom down past that.
-    let belowLaneDepth = MARKER_BADGE_HEIGHT;
+    // A badge's arrow drop plus one badge height below the lane is absorbed by the
+    // row gap; only a deeper all-branch / last-branch stack pushes the row's bottom
+    // down past that.
+    const hsBaseDepth = HS_BADGE_DROP + MARKER_BADGE_HEIGHT;
+    let belowLaneDepth = 0;
     for (const [key, group] of hsGroups) {
-      const depth = assignStackLevels(group) * MARKER_LEVEL_STEP + MARKER_BADGE_HEIGHT;
+      const depth = assignStackLevels(group) * MARKER_LEVEL_STEP + hsBaseDepth;
       if (key === 'all' || key === branchCount - 1) {
         if (depth > belowLaneDepth) belowLaneDepth = depth;
       } else {
@@ -699,7 +718,8 @@ export function layoutScore(fumen: Fumen, config: Partial<LayoutConfig> = {}): S
         rowStaveExtra[r][key as number] = Math.max(rowStaveExtra[r][key as number], depth - cfg.staveGap);
       }
     }
-    rowExtraBelow[r] = belowLaneDepth - MARKER_BADGE_HEIGHT;
+    rowBelowLaneDepth[r] = belowLaneDepth;
+    rowExtraBelow[r] = Math.max(0, belowLaneDepth - hsBaseDepth);
     rowHsTags[r] = hsTags;
   }
 
@@ -759,26 +779,31 @@ export function layoutScore(fumen: Fumen, config: Partial<LayoutConfig> = {}): S
     // Top tags climb upward as their level rises. BPM points down to the normal
     // (first) stave's top edge; a standalone branch flag gets its own arrow to it;
     // a branch flag paired with BPM uses the join line instead (joinFromX, render).
+    // A level-0 badge hangs one arrow span above that anchor, so its connector is
+    // exactly MARKER_ARROW_SPAN long — the HS arrow below the lane matches it.
+    const topAnchorAbs = y0 + laneTopRel + STAVE_SNAP_INSET;
     for (const tag of rowTopTags[r]) {
       const marker = makeMarker(tag);
-      marker.badgeY = y0 - tag.level * MARKER_LEVEL_STEP;
+      marker.badgeY = topAnchorAbs - MARKER_ARROW_SPAN - MARKER_BADGE_HEIGHT - tag.level * MARKER_LEVEL_STEP;
       const wantsArrow = tag.kind === 'bpm' || (tag.kind === 'branch' && tag.joinFromX === undefined);
       if (wantsArrow) {
         marker.arrowFromY = marker.badgeY + MARKER_BADGE_HEIGHT - MARKER_CORNER_OVERLAP;
-        marker.arrowToY = measures[tag.measureIndex].staveYs[0] - cfg.staveHeight / 2 + STAVE_SNAP_INSET;
+        marker.arrowToY = topAnchorAbs;
       }
       measures[tag.measureIndex].timingMarkers.push(marker);
     }
     for (const tag of rowHsTags[r]) {
       const marker = makeMarker(tag);
-      marker.badgeY = y0 + hsAnchorRel(tag.branchIndex, staveExtra) + tag.level * MARKER_LEVEL_STEP;
-      marker.arrowFromY = marker.badgeY + MARKER_CORNER_OVERLAP;
       // Per-branch: bottom edge of that branch's stave. All-branch: bottom edge of
       // the whole lane (the bottom stave). Both pulled in by the snap-line inset.
       marker.arrowToY =
         tag.branchIndex === undefined
           ? laneBottomAbs - STAVE_SNAP_INSET
           : measures[tag.measureIndex].staveYs[tag.branchIndex] + cfg.staveHeight / 2 - STAVE_SNAP_INSET;
+      // The badge hangs a full arrow span below that anchor (space pass 2 reserved
+      // as HS_BADGE_DROP); without it the connector would hide under the badge.
+      marker.badgeY = y0 + hsAnchorRel(tag.branchIndex, staveExtra) + HS_BADGE_DROP + tag.level * MARKER_LEVEL_STEP;
+      marker.arrowFromY = marker.badgeY + MARKER_CORNER_OVERLAP;
       measures[tag.measureIndex].timingMarkers.push(marker);
     }
   }
@@ -816,7 +841,7 @@ export function layoutScore(fumen: Fumen, config: Partial<LayoutConfig> = {}): S
   const totalHeight =
     rowSpans.length === 0
       ? cfg.paddingY + baseMeasureRowHeight + cfg.paddingY
-      : rowY[lastRow] + rowContentHeight[lastRow] + rowExtraBelow[lastRow] + cfg.paddingY;
+      : rowY[lastRow] + rowContentHeight[lastRow] + rowBelowLaneDepth[lastRow] + cfg.paddingY;
   const totalWidth = effectiveContentWidth + cfg.paddingX * 2;
 
   return { config: cfg, hasBranches, rows, measures, measureStartMs, notes, notesByRow, totalHeight, totalWidth };

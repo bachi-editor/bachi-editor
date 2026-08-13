@@ -72,6 +72,23 @@ describe('TJA import conversion', () => {
     expect(decodeTjaBytes(new Uint8Array([0x83, 0x65, 0x83, 0x58, 0x83, 0x67]))).toBe('テスト');
   });
 
+  test('carries DEMOSTART out as milliseconds, and only when it is usable', () => {
+    const withDemo = (value: string) => convertTjaForImport(TJA.replace('BPM:120', `DEMOSTART:${value}\nBPM:120`));
+
+    expect(withDemo('12.34').demoStartMs).toBe(12340);
+    expect(withDemo('0').demoStartMs).toBe(0);
+    // Authoring tools emit hair-negative values (ESE has -0.038); like the bank
+    // field itself, they mean "from the start".
+    expect(withDemo('-0.038').demoStartMs).toBe(0);
+    // Absent, blank, and non-numeric all leave the bank's own value alone rather
+    // than defaulting to a preview position the TJA never asked for.
+    expect(convertTjaForImport(TJA).demoStartMs).toBeUndefined();
+    expect(withDemo('').demoStartMs).toBeUndefined();
+    expect(withDemo('later').demoStartMs).toBeUndefined();
+    expect(withDemo('later').warnings).toContainEqual({ code: 'invalid-value', detail: 'DEMOSTART', count: 1 });
+    expect(convertTjaForImport(TJA).warnings.some((w) => w.detail === 'DEMOSTART')).toBe(false);
+  });
+
   test('converts localized metadata, decimal scoring, branches, and full player triples', () => {
     const imported = convertTjaForImport(TJA);
 

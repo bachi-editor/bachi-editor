@@ -315,7 +315,7 @@ function drawNoteText(
   const recommendation = input.recommendations.get(noteLayout.note);
   const mismatch = recommendation !== undefined && recommendation !== noteLayout.note.type;
   const radius = noteHeadRadius(big, noteScale);
-  const fontSize = (big ? 8 : 10) * noteScale;
+  const fontSize = (big ? 6.4 : 8) * noteScale;
 
   ctx.save();
   ctx.fillStyle = mismatch ? COLORS.warningText : COLORS.text;
@@ -599,15 +599,24 @@ function drawTimingBadge(ctx: CanvasRenderingContext2D, marker: TimingMarker) {
   drawBadge(ctx, marker.text, marker.x, marker.badgeY, marker.width, bg, fg);
 }
 
-function drawRowGutter(ctx: CanvasRenderingContext2D, row: RowLayout) {
+/**
+ * Measure-number chip at the row's left edge. It brackets the stave lane only —
+ * the header band above the staves is badge space, so including it would push the
+ * chip's midpoint half a header above the centre line and leave the row reading
+ * top-heavy. Framing the lane keeps the chip centred on the (middle) stave's
+ * centre line, matching drawMeasureSelection.
+ */
+function drawRowGutter(ctx: CanvasRenderingContext2D, row: RowLayout, headerHeight: number) {
+  const laneTop = row.y + headerHeight;
+  const laneHeight = Math.max(1, row.height - headerHeight);
   ctx.save();
   ctx.fillStyle = COLORS.gutterBg;
-  fillRoundedRect(ctx, row.gutterX, row.y, row.gutterWidth - 10, row.height, 6);
+  fillRoundedRect(ctx, row.gutterX, laneTop, row.gutterWidth - 10, laneHeight, 6);
   ctx.strokeStyle = COLORS.beatLine;
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(row.gutterX + row.gutterWidth - 10.5, row.y + 2);
-  ctx.lineTo(row.gutterX + row.gutterWidth - 10.5, row.y + row.height - 2);
+  ctx.moveTo(row.gutterX + row.gutterWidth - 10.5, laneTop + 2);
+  ctx.lineTo(row.gutterX + row.gutterWidth - 10.5, laneTop + laneHeight - 2);
   ctx.stroke();
 
   // Measure number only — no time-signature or start/branch tags.
@@ -615,7 +624,7 @@ function drawRowGutter(ctx: CanvasRenderingContext2D, row: RowLayout) {
   ctx.textBaseline = 'top';
   ctx.font = "700 11px 'JetBrains Mono', ui-monospace, monospace";
   ctx.fillStyle = COLORS.text;
-  ctx.fillText(`M${String(row.firstMeasureIndex + 1).padStart(3, '0')}`, row.gutterX + 10, row.y + 5);
+  ctx.fillText(`M${String(row.firstMeasureIndex + 1).padStart(3, '0')}`, row.gutterX + 10, laneTop + 5);
   ctx.restore();
 }
 
@@ -672,7 +681,7 @@ export function drawStatic(
   for (const row of layout.rows) {
     if (!rowIntersects(row, bounds)) continue;
     visibleRowIndexes.push(row.index);
-    drawRowGutter(ctx, row);
+    drawRowGutter(ctx, row, cfg.headerHeight);
   }
 
   // BPM/HS markers from every visible measure, collected so their connectors and

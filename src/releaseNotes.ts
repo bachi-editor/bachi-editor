@@ -16,6 +16,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES = [
   {
+    version: '0.0.4',
+    date: '2026-08-12',
+    titleKey: 'about.release.0_0_4.title',
+    changeKeys: [
+      'about.release.0_0_4.importParts',
+      'about.release.0_0_4.demoStart',
+      'about.release.0_0_4.timingArrows',
+      'about.release.0_0_4.measureNumber',
+      'about.release.0_0_4.noteText',
+    ],
+  },
+  {
     version: '0.0.3',
     date: '2026-08-11',
     titleKey: 'about.release.0_0_3.title',

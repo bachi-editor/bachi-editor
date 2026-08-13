@@ -130,6 +130,8 @@ export interface ParsedTjaSong {
   offset: number;
   title: TjaTextFields;
   subtitle: TjaTextFields;
+  /** DEMOSTART in milliseconds; undefined when the TJA omits it or it is unusable. */
+  demoStartMs?: number;
   courses: TjaCourse[];
   warnings: TjaImportWarning[];
 }
@@ -150,9 +152,30 @@ export interface TjaImportChart {
 export interface TjaImportResult {
   title: Record<Locale, string>;
   subtitle: Record<Locale, string>;
+  /** Song-select demo start in milliseconds, or undefined when the TJA has none.
+   *  The game keeps this value in the sound bank's TONE record rather than in the
+   *  fumen or musicinfo, so applying it patches sound/<song>.nus3bank. */
+  demoStartMs?: number;
   charts: TjaImportChart[];
   warnings: TjaImportWarning[];
 }
+
+/**
+ * Which parts of a TJA the user chose to apply. Each maps to an independent
+ * destination — musicinfo/wordlist, the fumen files, and the sound bank — so any
+ * combination is a valid import.
+ */
+export interface TjaImportOptions {
+  metadata: boolean;
+  charts: boolean;
+  demoStart: boolean;
+}
+
+export const DEFAULT_TJA_IMPORT_OPTIONS: TjaImportOptions = {
+  metadata: true,
+  charts: true,
+  demoStart: true,
+};
 
 export class TjaImportError extends Error {
   constructor(message: string) {
@@ -534,6 +557,7 @@ export function parseTja(text: string): ParsedTjaSong {
 
   let bpm: number | undefined;
   let offset: number | undefined;
+  let demoStart: string | undefined;
   const title: TjaTextFields = { base: '' };
   const subtitle: TjaTextFields = { base: '' };
   for (const line of lines) {
@@ -543,6 +567,7 @@ export function parseTja(text: string): ParsedTjaSong {
     const value = match[2].trim();
     if (name === 'BPM' && bpm === undefined) bpm = parseFinite(value, 120, warnings, 'BPM');
     else if (name === 'OFFSET' && offset === undefined) offset = parseFinite(value, 0, warnings, 'OFFSET');
+    else if (name === 'DEMOSTART' && demoStart === undefined) demoStart = value;
     else if (name === 'TITLE') title.base = value;
     else if (name === 'TITLEJA') title.ja = value;
     else if (name === 'TITLEZH') title.zh = value;
@@ -556,6 +581,20 @@ export function parseTja(text: string): ParsedTjaSong {
   if (offset === undefined) {
     offset = 0;
     warnings.add('missing-offset');
+  }
+  // DEMOSTART is seconds from the audio's own zero. Unlike every other header it
+  // has no home in the fumen or musicinfo — the game reads it from the sound
+  // bank — so it is carried out as milliseconds for the caller to patch there.
+  // Slightly negative values are common in the wild (ESE has -0.038 and -0.045,
+  // authoring artefacts of an offset subtraction) and mean "from the start", so
+  // they clamp to 0 exactly as the bank field and its editor do. Only a value
+  // that is no number at all is dropped: the position the bank already carries
+  // beats one invented here.
+  let demoStartMs: number | undefined;
+  if (demoStart !== undefined && demoStart !== '') {
+    const seconds = Number(demoStart);
+    if (Number.isFinite(seconds)) demoStartMs = Math.max(0, Math.round(seconds * 1000));
+    else warnings.add('invalid-value', 'DEMOSTART');
   }
 
   let seed: CourseSeed | undefined;
@@ -654,7 +693,15 @@ export function parseTja(text: string): ParsedTjaSong {
     if (!existing || existingSpecial || !nextSpecial) bySlot.set(key, course);
   }
 
-  return { bpm: bpm as number, offset, title, subtitle, courses: [...bySlot.values()], warnings: warnings.list() };
+  return {
+    bpm: bpm as number,
+    offset,
+    title,
+    subtitle,
+    demoStartMs,
+    courses: [...bySlot.values()],
+    warnings: warnings.list(),
+  };
 }
 
 function fixBalloonValues(
@@ -1196,6 +1243,7 @@ export function convertTjaForImport(text: string): TjaImportResult {
   return {
     title: localizedText(parsed.title),
     subtitle: localizedText(parsed.subtitle),
+    demoStartMs: parsed.demoStartMs,
     charts: charts.sort(chartSort),
     warnings: warnings.list(),
   };
