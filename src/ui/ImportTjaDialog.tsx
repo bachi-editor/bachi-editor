@@ -1,11 +1,15 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import type { FumenDifficulty, FumenPlayer, FumenSlot } from '../fs/fumens';
+import { readNus3BankDemoStartMs } from '../codec';
+import { readSoundBankBytes, resolveSoundFile } from '../fs/sound';
 import { useAppStore } from '../model/store';
-import { LOCALES, songStars, type SongRow } from '../model/songlist';
+import { hasAudioFile, LOCALES, songStars, type SongRow } from '../model/songlist';
+import { formatSeconds, soundMetadataKey } from '../model/soundMetadata';
 import { CHART_METADATA_FIELDS, summarizeFumenMetadata } from '../model/fumenMetadata';
 import {
+  DEFAULT_TJA_IMPORT_OPTIONS,
   SHINUTI_FIELDS,
   SHINUTI_SCORE_FIELDS,
   convertTjaForImport,
@@ -15,10 +19,53 @@ import {
   summarizeImportedChart,
   type ShinutiField,
   type TjaImportChart,
+  type TjaImportOptions,
   type TjaImportResult,
   type TjaImportWarningCode,
 } from '../model/tjaImport';
 import { Icon } from './shell/Icon';
+
+// The parts the user last chose to import. Remembered (best-effort localStorage)
+// so a repeated workflow — charts only, say — survives reopening the dialog and
+// the app. Anything unreadable falls back to importing everything.
+const IMPORT_PARTS_STORAGE_KEY = 'tk-tja-import-parts';
+
+function loadImportOptions(): TjaImportOptions {
+  try {
+    const raw = localStorage.getItem(IMPORT_PARTS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<TjaImportOptions>;
+      return {
+        metadata: parsed.metadata !== false,
+        charts: parsed.charts !== false,
+        demoStart: parsed.demoStart !== false,
+      };
+    }
+  } catch {
+    // ignore — fall through to the all-on default
+  }
+  return DEFAULT_TJA_IMPORT_OPTIONS;
+}
+
+function persistImportOptions(options: TjaImportOptions): void {
+  try {
+    localStorage.setItem(IMPORT_PARTS_STORAGE_KEY, JSON.stringify(options));
+  } catch {
+    // ignore — persistence is best-effort
+  }
+}
+
+/**
+ * The demo start is the one imported value that lives in the sound bank, so the
+ * preview has to look at sound/<song>.nus3bank rather than the datatables: what
+ * it holds now, and whether it can hold one at all.
+ */
+type DemoStartProbe =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; currentMs: number }
+  /** No bank on disk, or a bank whose TONE record carries no demo-start field. */
+  | { kind: 'unsupported' };
 
 const DIFFICULTY_KEYS: Record<FumenDifficulty, MessageKey> = {
   easy: 'metadata.difficulty.easy',
@@ -204,6 +251,42 @@ function ChartPreviewRow({
   );
 }
 
+/**
+ * A preview group's header, doubling as the switch for that part of the import.
+ * A part that cannot be applied at all — a demo start with no bank to write it
+ * into — is disabled and reads as unchecked without forgetting the preference.
+ */
+function PartHeader({
+  label,
+  checked,
+  onChange,
+  available = true,
+  locked = false,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+  /** False when this part cannot be applied at all — reads as unchecked. */
+  available?: boolean;
+  /** True only while the import runs: no toggling, but the choice still shows. */
+  locked?: boolean;
+}) {
+  const t = useT();
+  const on = checked && available;
+  return (
+    <label className={`tk-modal-grouphd tk-import-parthd tk-check${available ? '' : ' is-disabled'}`}>
+      <input
+        type="checkbox"
+        checked={on}
+        disabled={locked || !available}
+        onChange={(event) => onChange(event.currentTarget.checked)}
+      />
+      <span>{label}</span>
+      {!on && <span className="tk-import-skiptag">{t('importtja.skipped')}</span>}
+    </label>
+  );
+}
+
 function RemovedChartRow({ songId, slot }: { songId: string; slot: FumenSlot }) {
   const t = useT();
   return (
@@ -234,10 +317,61 @@ export function ImportTjaDialog() {
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string>();
+  const [options, setOptions] = useState<TjaImportOptions>(loadImportOptions);
+  const [demoProbe, setDemoProbe] = useState<DemoStartProbe>({ kind: 'idle' });
 
   const open = project.kind === 'open' ? project.project : undefined;
   const row = open && songId ? open.songs.byId.get(songId) : undefined;
-  if (!row || !songId) return null;
+
+  const tjaDemoStartMs = selected?.imported.demoStartMs;
+  const audioOnDisk = !!open && !!row && hasAudioFile(open.assets, row);
+  const soundFile = useMemo(() => {
+    if (!row) return undefined;
+    const resolved = resolveSoundFile(row.info);
+    // The bank's playable tone is picked by file stem, as in the Sound tab.
+    return { ...resolved, stem: resolved.filename.replace(/\.nus3bank$/i, '') };
+  }, [row]);
+  // A demo start the editor already knows: the Sound tab's baseline, or the value
+  // a pending edit will write. Either way it saves re-reading the whole bank.
+  const knownDemoStartMs = open && soundFile
+    ? (open.soundMetadataDrafts.get(soundMetadataKey(soundFile.filename))
+      ?? open.soundMetadataBaselines.get(soundMetadataKey(soundFile.filename)))?.demoStartMs
+    : undefined;
+
+  useEffect(() => {
+    if (tjaDemoStartMs === undefined || !audioOnDisk || !open || !soundFile || !row) {
+      setDemoProbe({ kind: 'idle' });
+      return;
+    }
+    if (knownDemoStartMs !== undefined) {
+      setDemoProbe({ kind: 'ready', currentMs: knownDemoStartMs });
+      return;
+    }
+    let cancelled = false;
+    setDemoProbe({ kind: 'loading' });
+    (async () => {
+      try {
+        const bytes = await readSoundBankBytes(open.root, row.info);
+        const currentMs = bytes ? readNus3BankDemoStartMs(bytes, soundFile.stem) : undefined;
+        if (cancelled) return;
+        setDemoProbe(currentMs === undefined ? { kind: 'unsupported' } : { kind: 'ready', currentMs });
+      } catch {
+        if (!cancelled) setDemoProbe({ kind: 'unsupported' });
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tjaDemoStartMs, audioOnDisk, knownDemoStartMs, soundFile?.filename, row?.info, open?.root]);
+
+  if (!row || !songId || !soundFile) return null;
+
+  const setPart = (part: keyof TjaImportOptions, value: boolean) => {
+    setOptions((previous) => {
+      const next = { ...previous, [part]: value };
+      persistImportOptions(next);
+      return next;
+    });
+  };
 
   const chooseFile = () => inputRef.current?.click();
   const readFile = async (file: File | undefined) => {
@@ -257,11 +391,30 @@ export function ImportTjaDialog() {
     }
   };
 
+  // The demo start can only be applied when the TJA carries one and the bank on
+  // disk has a field to put it in; the checkbox stays off the table otherwise.
+  const demoStartApplicable = demoProbe.kind === 'ready';
+  const applyDemoStart = options.demoStart && demoStartApplicable;
+  const nothingToApply = !options.metadata && !options.charts && !applyDemoStart;
+  // Why it cannot be applied, most fundamental reason first: nothing to import,
+  // nowhere to put it, or a bank whose tone record has no such field.
+  const demoStartIssue: MessageKey | undefined =
+    demoStartApplicable || demoProbe.kind === 'loading' ? undefined
+      : tjaDemoStartMs === undefined ? 'importtja.demoStartMissing'
+        : !audioOnDisk ? 'importtja.demoStartNoAudio'
+          : 'importtja.demoStartUnsupported';
+  const demoStartEmptyKey: MessageKey =
+    demoProbe.kind === 'loading' ? 'importtja.demoStartReading' : 'importtja.demoStartNone';
+
   const submit = async () => {
-    if (!selected || importing) return;
+    if (!selected || importing || nothingToApply) return;
     setImporting(true);
     setError(undefined);
-    const result = await importTja(row.uniqueId, selected.imported);
+    const result = await importTja(row.uniqueId, selected.imported, {
+      metadata: options.metadata,
+      charts: options.charts,
+      demoStart: applyDemoStart,
+    });
     if (!result.ok) {
       setError(result.message);
       setImporting(false);
@@ -321,34 +474,85 @@ export function ImportTjaDialog() {
             </div>
 
             <div className="tk-modal-group">
-              <div className="tk-modal-grouphd">{t('importtja.metadataGroup')}</div>
-              {changes.length === 0 ? (
-                <div className="tk-modal-empty">{t('importtja.noMetadataChanges')}</div>
-              ) : changes.map((change) => (
-                <div className="tk-save-row" key={change.key}>
-                  <span className="tk-save-badge edit">~</span>
-                  <div className="tk-save-rowmain">
-                    <div className="tk-save-file">{change.label}</div>
-                    <div className="tk-save-change">
-                      <span className="v"><span className="from">{change.from}</span> → <span className="to">{change.to}</span></span>
+              <PartHeader
+                label={t('importtja.metadataGroup')}
+                checked={options.metadata}
+                onChange={(value) => setPart('metadata', value)}
+                locked={importing}
+              />
+              <div className={options.metadata ? undefined : 'tk-import-skipped'}>
+                {changes.length === 0 ? (
+                  <div className="tk-modal-empty">{t('importtja.noMetadataChanges')}</div>
+                ) : changes.map((change) => (
+                  <div className="tk-save-row" key={change.key}>
+                    <span className="tk-save-badge edit">~</span>
+                    <div className="tk-save-rowmain">
+                      <div className="tk-save-file">{change.label}</div>
+                      <div className="tk-save-change">
+                        <span className="v"><span className="from">{change.from}</span> → <span className="to">{change.to}</span></span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-              <div className="tk-save-issue">{t('importtja.derivedMetadata')}</div>
+                ))}
+                <div className="tk-save-issue">{t('importtja.derivedMetadata')}</div>
+              </div>
             </div>
 
             <div className="tk-modal-group">
-              <div className="tk-modal-grouphd">{t('importtja.chartsGroup')}</div>
-              {selected.imported.charts.map((chart) => (
-                <ChartPreviewRow
-                  key={`${chart.slot.difficulty}:${chart.slot.player}`}
-                  songId={songId}
-                  chart={chart}
-                  current={currentNames}
-                />
-              ))}
-              {removed.map((slot) => <RemovedChartRow key={slot.filename} songId={songId} slot={slot} />)}
+              <PartHeader
+                label={t('importtja.chartsGroup')}
+                checked={options.charts}
+                onChange={(value) => setPart('charts', value)}
+                locked={importing}
+              />
+              <div className={options.charts ? undefined : 'tk-import-skipped'}>
+                {selected.imported.charts.map((chart) => (
+                  <ChartPreviewRow
+                    key={`${chart.slot.difficulty}:${chart.slot.player}`}
+                    songId={songId}
+                    chart={chart}
+                    current={currentNames}
+                  />
+                ))}
+                {removed.map((slot) => <RemovedChartRow key={slot.filename} songId={songId} slot={slot} />)}
+              </div>
+            </div>
+
+            <div className="tk-modal-group">
+              <PartHeader
+                label={t('importtja.demoStartGroup')}
+                checked={options.demoStart}
+                onChange={(value) => setPart('demoStart', value)}
+                available={demoStartApplicable}
+                locked={importing}
+              />
+              <div className={applyDemoStart ? undefined : 'tk-import-skipped'}>
+                {demoProbe.kind === 'ready' && tjaDemoStartMs !== undefined ? (
+                  <div className="tk-save-row">
+                    <span className="tk-save-badge edit">~</span>
+                    <div className="tk-save-rowmain">
+                      <div className="tk-import-chart-head">
+                        <span className="tk-mono tk-save-file">{soundFile.displayPath}</span>
+                      </div>
+                      <div className="tk-save-sum">{t('importtja.demoStartRow')}</div>
+                      <div className="tk-save-change">
+                        <span className="v">
+                          <span className="from">{formatSeconds(demoProbe.currentMs)}</span>
+                          {' → '}
+                          <span className="to">{formatSeconds(tjaDemoStartMs)}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="tk-modal-empty">{t(demoStartEmptyKey)}</div>
+                )}
+              </div>
+              {demoStartIssue && (
+                <div className="tk-save-issue warn tk-import-issue">
+                  <Icon name="alert" size={14} /> {t(demoStartIssue)}
+                </div>
+              )}
             </div>
 
             {selected.imported.warnings.length > 0 && (
@@ -369,10 +573,17 @@ export function ImportTjaDialog() {
         )}
 
         <div className="tk-modal-foot">
-          {selected && !error && <span className="tk-save-status ok"><Icon name="check" /> {t('importtja.ready')}</span>}
+          {selected && !error && (nothingToApply
+            ? <span className="tk-save-status warn"><Icon name="alert" /> {t('importtja.nothingSelected')}</span>
+            : <span className="tk-save-status ok"><Icon name="check" /> {t('importtja.ready')}</span>
+          )}
           <div className="tk-spacer" />
           <button className="tk-btn" onClick={closeTjaImport} disabled={parsing || importing}>{t('common.cancel')}</button>
-          <button className="tk-btn tk-btn-primary" onClick={() => void submit()} disabled={!selected || parsing || importing}>
+          <button
+            className="tk-btn tk-btn-primary"
+            onClick={() => void submit()}
+            disabled={!selected || parsing || importing || nothingToApply}
+          >
             <Icon name="import" /> {importing ? t('importtja.importing') : t('importtja.importAction')}
           </button>
         </div>

@@ -864,6 +864,7 @@
 .tk-modal-foot { display:flex; align-items:center; gap:10px; padding:14px 20px; border-top:1px solid var(--line); background: var(--panel-2); }
 .tk-save-status { display:flex; align-items:center; gap:7px; font-size:12.5px; font-weight:600; }
 .tk-save-status.ok { color: var(--ok); }
+.tk-save-status.warn { color: var(--warn); }
 .tk-save-status.err { color: var(--don-deep); }
 /* music order board — drag affordances (Phase 2.5) */
 .tk-folder.ghost { border-style:dashed; background:transparent; align-items:center; justify-content:center; min-height:120px; color:var(--ink-3); cursor:pointer; }
@@ -992,6 +993,14 @@
   display:flex; align-items:center; justify-content:space-between; gap:16px;
   padding:12px 14px; border-top:1px solid var(--line); background:var(--panel-2);
 }
+/* Each preview group's header is also its on/off switch; an unpicked group keeps
+   its rows visible but muted, so the preview still answers "what would this do?" */
+.tk-import-parthd { display:flex; align-items:center; gap:9px; }
+.tk-import-parthd.is-disabled { cursor:default; color:var(--ink-4); }
+.tk-import-parthd.is-disabled input { cursor:default; }
+.tk-import-skiptag { font-weight:600; color:var(--ink-4); }
+.tk-import-skipped { opacity:.45; }
+.tk-import-issue { display:flex; align-items:center; gap:7px; }
 .tk-import-chart-head { display:flex; align-items:center; gap:8px; min-width:0; }
 .tk-import-chart-head .tk-save-file { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tk-import-chart-head .pill {

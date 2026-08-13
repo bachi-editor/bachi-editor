@@ -28,7 +28,9 @@ export function soundMetadataKey(filename: string): string {
   return filename.trim().toLowerCase();
 }
 
-function formatSeconds(ms: number): string {
+/** Demo start as plain seconds — the unit TJA authors write it in. Shared with
+ *  the TJA import preview so both places phrase the same edit identically. */
+export function formatSeconds(ms: number): string {
   return `${(ms / 1000).toFixed(3).replace(/0+$/, '').replace(/\.$/, '')} s`;
 }
 
