@@ -104,6 +104,14 @@ export function TopBar() {
             <button
               className="tk-menu-item"
               role="menuitem"
+              onClick={() => { close(); openExportDialog(); }}
+            >
+              <span className="ic"><Icon name="export" size={15} /></span>
+              {t('export.title')}
+            </button>
+            <button
+              className="tk-menu-item"
+              role="menuitem"
               onClick={() => { close(); openAbout(); }}
             >
               <span className="ic"><Icon name="info" size={15} /></span>

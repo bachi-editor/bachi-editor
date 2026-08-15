@@ -156,7 +156,7 @@ export function App() {
       {deleteSongId !== undefined && <DeleteSongDialog />}
       {tjaImportOpen && <ImportTjaDialog />}
       {settingsOpen && <SettingsDialog />}
-      {/* Export is launched from Settings, so it renders last to stack on top. */}
+      {/* Export can be opened over Settings, so it renders after it to stack on top. */}
       {exportDialogOpen && <ExportDialog />}
       {/* About doubles as the first-run welcome, so it sits above everything. */}
       {aboutOpen && <AboutDialog />}

@@ -2355,11 +2355,10 @@ export const useAppStore = create<AppState>((set, get) => {
     set({ ui: { ...get().ui, saveDialogOpen: true, saveScope: scope }, save: { kind: 'idle' } });
   },
   closeSaveDialog: () => set({ ui: { ...get().ui, saveDialogOpen: false } }),
-  openExportDialog: () => {
-    const cur = get().project;
-    if (cur.kind !== 'open') return;
-    set({ ui: { ...get().ui, exportDialogOpen: true } });
-  },
+  // No project guard: the bundle's Dani Dojo parts come from the standalone dani
+  // file slots, so the dialog is useful (and explains what is missing) with no
+  // game project open at all.
+  openExportDialog: () => set({ ui: { ...get().ui, exportDialogOpen: true } }),
   closeExportDialog: () => set({ ui: { ...get().ui, exportDialogOpen: false } }),
 
   commitSave: async (scope) => {

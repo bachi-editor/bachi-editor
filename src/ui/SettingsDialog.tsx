@@ -55,8 +55,8 @@ export function SettingsDialog() {
   const pickFolder = useAppStore((s) => s.setupPickFolder);
   const setKey = useAppStore((s) => s.setupSetKey);
   const openProject = useAppStore((s) => s.setupOpenProject);
-  // The export bundle has no button here right now, but the dialog still stacks
-  // above Settings and must keep owning Esc while it is open.
+  // The export bundle is launched from the overflow menu, not from here, but its
+  // dialog stacks above Settings and must keep owning Esc while it is open.
   const exportOpen = useAppStore((s) => s.ui.exportDialogOpen);
   const reconnect = useAppStore((s) => s.reconnect);
   const forget = useAppStore((s) => s.forgetProject);

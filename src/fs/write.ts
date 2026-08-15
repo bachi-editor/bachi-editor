@@ -44,8 +44,11 @@ export async function sealDatatable(
  * than remembered from load, so the style matches whatever is actually there.
  * A file we cannot read back falls through to compact JSON — a formatting
  * preference must never be the thing that blocks a save.
+ *
+ * Exported because the server bundle seals the same objects (see fs/exportBundle)
+ * and must produce the same bytes a save would.
  */
-async function styleOnDisk(root: ProjectRoot, name: DatatableName, keyHex: string): Promise<JsonTextStyle> {
+export async function datatableStyleOnDisk(root: ProjectRoot, name: DatatableName, keyHex: string): Promise<JsonTextStyle> {
   try {
     const bytes = await readBytes(root.datatable, name);
     if (!bytes) return MINIFIED_JSON_STYLE;
@@ -305,7 +308,7 @@ export async function saveDatatables(
     const name = fd.file;
     const obj = draft[FILE_KEYS[name]];
     const key = datatableKeyOf(root);
-    const newBytes = await sealDatatable(obj, key, await styleOnDisk(root, name, key));
+    const newBytes = await sealDatatable(obj, key, await datatableStyleOnDisk(root, name, key));
     const original = await readBytes(root.datatable, name);
 
     await writeBytes(root.datatable, name, newBytes);

@@ -979,6 +979,16 @@
 .tk-confirm-ic { display:inline-flex; flex:0 0 auto; color:var(--warn); }
 .tk-confirm-ic.danger { color:var(--don); }
 
+/* Pickable modal groups (TJA import, server bundle export). Each group's header
+   is also its on/off switch; an unpicked group keeps its rows visible but muted,
+   so the dialog still answers "what would this do?" */
+.tk-parthd { display:flex; align-items:center; gap:9px; }
+.tk-parthd.is-disabled { cursor:default; color:var(--ink-4); }
+.tk-parthd.is-disabled input { cursor:default; }
+.tk-skiptag { font-weight:600; color:var(--ink-4); }
+.tk-skipped { opacity:.45; }
+.tk-issue-row { display:flex; align-items:center; gap:7px; }
+
 /* TJA import: file choice followed by a complete, scrollable overwrite preview. */
 .tk-import-modal { width:720px; }
 .tk-import-file-input { display:none; }
@@ -993,20 +1003,23 @@
   display:flex; align-items:center; justify-content:space-between; gap:16px;
   padding:12px 14px; border-top:1px solid var(--line); background:var(--panel-2);
 }
-/* Each preview group's header is also its on/off switch; an unpicked group keeps
-   its rows visible but muted, so the preview still answers "what would this do?" */
-.tk-import-parthd { display:flex; align-items:center; gap:9px; }
-.tk-import-parthd.is-disabled { cursor:default; color:var(--ink-4); }
-.tk-import-parthd.is-disabled input { cursor:default; }
-.tk-import-skiptag { font-weight:600; color:var(--ink-4); }
-.tk-import-skipped { opacity:.45; }
-.tk-import-issue { display:flex; align-items:center; gap:7px; }
 .tk-import-chart-head { display:flex; align-items:center; gap:8px; min-width:0; }
 .tk-import-chart-head .tk-save-file { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .tk-import-chart-head .pill {
   flex:0 0 auto; font-size:10px; color:var(--ink-3); background:var(--panel-3);
   padding:2px 7px; border-radius:20px;
 }
+
+/* Server bundle export: which data sets go in, then in which format. */
+.tk-export-modal { width:640px; }
+.tk-export-paths { margin-top:4px; font-size:11.5px; color:var(--ink-3); }
+.tk-export-opt {
+  display:flex; align-items:flex-start; gap:10px; padding:10px 14px; cursor:pointer;
+  border-top:1px solid var(--line);
+}
+.tk-export-opt:hover { background:var(--panel-2); }
+.tk-export-opt input { flex:0 0 auto; width:14px; height:14px; margin:2px 0 0; accent-color:var(--accent); }
+.tk-export-optname { font-size:12.5px; font-weight:600; color:var(--ink); }
 
 /* Settings combines project credentials with the optional user-owned decoder. */
 .tk-settings-modal { width:680px; }
