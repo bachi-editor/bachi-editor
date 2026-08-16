@@ -60,8 +60,22 @@ function datatables(): RawDatatables {
     musicOrder: { items: [] },
     wordlist: {
       items: [
-        { key: 'song_target', englishUsText: 'Old title' },
-        { key: 'song_sub_target', englishUsText: 'Old subtitle' },
+        {
+          key: 'song_target',
+          japaneseText: '', japaneseFontType: 0,
+          englishUsText: 'Old title', englishUsFontType: 0,
+          chineseTText: '', chineseTFontType: 0,
+          chineseSText: '', chineseSFontType: 0,
+          koreanText: '', koreanFontType: 0,
+        },
+        {
+          key: 'song_sub_target',
+          japaneseText: '', japaneseFontType: 0,
+          englishUsText: 'Old subtitle', englishUsFontType: 0,
+          chineseTText: '', chineseTFontType: 0,
+          chineseSText: '', chineseSFontType: 0,
+          koreanText: '', koreanFontType: 0,
+        },
       ],
     },
   };

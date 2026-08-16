@@ -37,6 +37,7 @@ export async function encodeImportedSound(input: EncodeJobInput): Promise<Encode
       preferredStem: input.preferredStem,
       songId: input.songId,
       uniqueId: input.uniqueId,
+      bankId: input.bankId,
       demoStartMs: input.demoStartMs,
     };
     const transfer: Transferable[] = [

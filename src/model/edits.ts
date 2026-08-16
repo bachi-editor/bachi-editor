@@ -9,8 +9,9 @@
 // makes them trivially unit-testable and keeps the byte-perfect guarantees
 // (only re-serialise what changed) easy to reason about.
 
-import type { RawDatatables } from '../fs/datatables';
+import { COMPANION_TABLE_KEYS, type RawDatatables } from '../fs/datatables';
 import type {
+  CompanionSongItem,
   MusicInfoChartDerivedPatch,
   MusicInfoEditablePatch,
   MusicInfoItem,
@@ -18,6 +19,7 @@ import type {
   WordListItem,
 } from '../codec';
 import type { Locale } from './songlist';
+import { conformPatchValue, scaffoldRow, shapeKeys } from './datatableShape';
 
 export const LOCALE_KEYS: Locale[] = [
   'japaneseText',
@@ -79,6 +81,36 @@ export function nextUniqueId(d: RawDatatables): number {
   return max + 1;
 }
 
+/**
+ * Shapes used only when the target file has no rows at all to copy from — a
+ * brand-new or emptied datatable. Real projects always scaffold from their own
+ * rows; these keep `addSong` working on an empty table and are deliberately the
+ * CHN shapes the editor was originally built against.
+ */
+const CHN_MUSICINFO_SHAPE: MusicInfoItem = {
+  id: '', uniqueId: 0, genreNo: 0, songFileName: '', papamama: false,
+  branchEasy: false, branchNormal: false, branchHard: false, branchMania: false, branchUra: false,
+  starEasy: 0, starNormal: 0, starHard: 0, starMania: 0, starUra: 0,
+  shinutiEasy: 0, shinutiNormal: 0, shinutiHard: 0, shinutiMania: 0, shinutiUra: 0,
+  shinutiEasyDuet: 0, shinutiNormalDuet: 0, shinutiHardDuet: 0, shinutiManiaDuet: 0, shinutiUraDuet: 0,
+  shinutiScoreEasy: 0, shinutiScoreNormal: 0, shinutiScoreHard: 0, shinutiScoreMania: 0, shinutiScoreUra: 0,
+  shinutiScoreEasyDuet: 0, shinutiScoreNormalDuet: 0, shinutiScoreHardDuet: 0,
+  shinutiScoreManiaDuet: 0, shinutiScoreUraDuet: 0,
+  easyOnpuNum: 0, normalOnpuNum: 0, hardOnpuNum: 0, maniaOnpuNum: 0, uraOnpuNum: 0,
+  rendaTimeEasy: 0, rendaTimeNormal: 0, rendaTimeHard: 0, rendaTimeMania: 0, rendaTimeUra: 0,
+  fuusenTotalEasy: 0, fuusenTotalNormal: 0, fuusenTotalHard: 0, fuusenTotalMania: 0, fuusenTotalUra: 0,
+  spikeOnEasy: false, spikeOnNormal: false, spikeOnHard: false, spikeOnOni: false, spikeOnUra: false,
+};
+
+const CHN_WORDLIST_SHAPE: WordListItem = {
+  key: '',
+  japaneseText: '', japaneseFontType: 0,
+  englishUsText: '', englishUsFontType: 0,
+  chineseTText: '', chineseTFontType: 0,
+  koreanText: '', koreanFontType: 0,
+  chineseSText: '', chineseSFontType: 0,
+};
+
 /** Fields the Add Song dialog collects; everything else is scaffolded. */
 export interface NewSong {
   /** Explicit, immutable numeric Song No. */
@@ -92,7 +124,7 @@ export interface NewSong {
 }
 
 /**
- * Scaffold a new song's canonical musicinfo entry and wordlist title row.
+ * Scaffold a new song's canonical musicinfo, wordlist, and companion rows.
  * music_order is deliberately untouched: placement and ordering are managed
  * independently in the Music Order area.
  *
@@ -111,79 +143,116 @@ export function addSong(d: RawDatatables, song: NewSong): RawDatatables {
   const genreNo = song.genreNo;
   if (!Number.isInteger(genreNo) || genreNo < 0 || genreNo > 7) return d;
 
-  const info: MusicInfoItem = {
-    uniqueId,
-    id,
-    songFileName: `sound/song_${id}`,
-    genreNo,
-    papamama: false,
-    branchEasy: false,
-    branchNormal: false,
-    branchHard: false,
-    branchMania: false,
-    branchUra: false,
-    starEasy: 0,
-    starNormal: 0,
-    starHard: 0,
-    starMania: 0,
-    starUra: 0,
-    shinutiEasy: 0,
-    shinutiNormal: 0,
-    shinutiHard: 0,
-    shinutiMania: 0,
-    shinutiUra: 0,
-    shinutiEasyDuet: 0,
-    shinutiNormalDuet: 0,
-    shinutiHardDuet: 0,
-    shinutiManiaDuet: 0,
-    shinutiUraDuet: 0,
-    shinutiScoreEasy: 0,
-    shinutiScoreNormal: 0,
-    shinutiScoreHard: 0,
-    shinutiScoreMania: 0,
-    shinutiScoreUra: 0,
-    shinutiScoreEasyDuet: 0,
-    shinutiScoreNormalDuet: 0,
-    shinutiScoreHardDuet: 0,
-    shinutiScoreManiaDuet: 0,
-    shinutiScoreUraDuet: 0,
-    easyOnpuNum: 0,
-    normalOnpuNum: 0,
-    hardOnpuNum: 0,
-    maniaOnpuNum: 0,
-    uraOnpuNum: 0,
-    rendaTimeEasy: 0,
-    rendaTimeNormal: 0,
-    rendaTimeHard: 0,
-    rendaTimeMania: 0,
-    rendaTimeUra: 0,
-    fuusenTotalEasy: 0,
-    fuusenTotalNormal: 0,
-    fuusenTotalHard: 0,
-    fuusenTotalMania: 0,
-    fuusenTotalUra: 0,
-    spikeOnEasy: false,
-    spikeOnNormal: false,
-    spikeOnHard: false,
-    spikeOnOni: false,
-    spikeOnUra: false,
-  };
+  // Copy the shape of the rows already in this file rather than writing CHN
+  // literals — see model/datatableShape.ts for the divergences that forces.
+  const info = scaffoldRow<MusicInfoItem>(
+    d.musicinfo.items,
+    { uniqueId, id, songFileName: `sound/song_${id}`, genreNo },
+    { fallback: CHN_MUSICINFO_SHAPE, ensure: CHN_MUSICINFO_SHAPE },
+  );
 
-  // Title row — all five locales seeded with the same string so the new song is
-  // visible regardless of the UI locale.
-  const titleRow: WordListItem = { key: `song_${id}` };
-  for (const l of LOCALE_KEYS) titleRow[l] = title;
-
-  return {
-    ...d,
-    musicinfo: { ...d.musicinfo, items: [...d.musicinfo.items, info] },
-    wordlist: { ...d.wordlist, items: [...d.wordlist.items, titleRow] },
-  };
+  return withCompanionRows(
+    {
+      ...d,
+      musicinfo: { ...d.musicinfo, items: [...d.musicinfo.items, info] },
+      wordlist: { ...d.wordlist, items: [...d.wordlist.items, ...songWordlistRows(d, id, title)] },
+    },
+    { uniqueId, id },
+  );
 }
 
 /**
- * Remove a song from all three datatables: its musicinfo + music_order entries
- * and every wordlist row keyed to it (title / subtitle / detail). The on-disk
+ * Add the song's row to every companion table that the project has.
+ *
+ * Both shipped dumps keep music_attribute / music_usbsetting / music_ai_section
+ * exactly 1:1 with musicinfo. A song that exists only in musicinfo reaches the
+ * game with no enso background, dancer, renda effect or AI section data — all
+ * of which it resolves when the chart starts. Rows are scaffolded from the
+ * file's own shape, so each keeps that table's field set and types.
+ */
+function withCompanionRows(d: RawDatatables, song: { uniqueId: number; id: string }): RawDatatables {
+  let next = d;
+  for (const field of COMPANION_TABLE_KEYS) {
+    const table = next[field];
+    if (!table) continue;
+    if (table.items.some((row) => row.id === song.id || row.uniqueId === song.uniqueId)) continue;
+    const row = scaffoldRow<CompanionSongItem>(table.items, song, {
+      fallback: { id: song.id, uniqueId: song.uniqueId },
+    });
+    next = { ...next, [field]: { ...table, items: [...table.items, row] } };
+  }
+  return next;
+}
+
+/** The three wordlist rows every shipped song has: title, subtitle, detail. */
+export const SONG_WORDLIST_PREFIXES = ['song_', 'song_sub_', 'song_detail_'] as const;
+
+export function songWordlistKey(prefix: (typeof SONG_WORDLIST_PREFIXES)[number], id: string): string {
+  return `${prefix}${id}`;
+}
+
+/**
+ * Scaffold a song's wordlist rows in the file's own shape.
+ *
+ * All three exist for 1,034 of 1,034 shipped JPN songs and 1,042 of 1,042 CHN
+ * songs, so creating only the title row leaves a song the game cannot look up
+ * completely. Each row is shaped from its own prefix family because the three
+ * populations differ.
+ *
+ * `song_detail_` is left empty in every locale. It supplies the Japanese title
+ * to the non-Japanese locales, and 620 shipped JPN rows are already blank; when
+ * the title is the same string in every locale — which is what import produces
+ * — a blank detail row is the accurate one rather than a duplicated guess.
+ *
+ * Font types scaffold to 0, the Japanese font. It is the only one of the five
+ * that renders every script the others do, so it is the safe default for a
+ * title whose language we do not know; it is also what all 1,254 shipped
+ * `song_detail_` rows use.
+ */
+function songWordlistRows(d: RawDatatables, id: string, title: string): WordListItem[] {
+  return SONG_WORDLIST_PREFIXES.map((prefix) => {
+    const key = songWordlistKey(prefix, id);
+    const family = (row: WordListItem) => row.key !== key && belongsToPrefix(row.key, prefix);
+    const text = prefix === 'song_' ? title : '';
+    const keys = shapeKeys(d.wordlist.items, { shapeFrom: family, fallback: CHN_WORDLIST_SHAPE });
+    const seed: Partial<WordListItem> = { key };
+    for (const locale of LOCALE_KEYS) if (keys.has(locale)) seed[locale] = text;
+    return scaffoldRow<WordListItem>(d.wordlist.items, seed, {
+      shapeFrom: family,
+      fallback: CHN_WORDLIST_SHAPE,
+    });
+  });
+}
+
+/** `song_sub_x` must not count as `song_` when sampling a shape. */
+function belongsToPrefix(key: string, prefix: (typeof SONG_WORDLIST_PREFIXES)[number]): boolean {
+  if (!key.startsWith(prefix)) return false;
+  return SONG_WORDLIST_PREFIXES.every(
+    (other) => other.length <= prefix.length || !key.startsWith(other),
+  );
+}
+
+/**
+ * Scaffold one music_order placement in the file's own shape.
+ *
+ * Placements carry `closeDispType` in both dumps (JPN: 0 ×1,204, 1 ×35) and the
+ * game pushes it through to the song-select Lua as `tbl_closeDispType`, so a
+ * placement built from `{ uniqueId, id, genreNo }` alone is short a field the
+ * shipped data always has.
+ */
+export function scaffoldOrderPlacement(
+  d: RawDatatables,
+  placement: { uniqueId: number; id: string; genreNo: number },
+): MusicOrderItem {
+  return scaffoldRow<MusicOrderItem>(d.musicOrder.items, placement, {
+    fallback: { genreNo: 0, id: '', uniqueId: 0, closeDispType: 0 },
+    ensure: { closeDispType: 0 },
+  });
+}
+
+/**
+ * Remove a song from its catalogue, order, wordlist, and companion tables.
+ * The on-disk
  * fumen folder + sound file are removed at *save* time, derived
  * from the baseline-vs-draft musicinfo diff — see fs/write.ts. Returns the same
  * reference if the uniqueId isn't present.
@@ -192,16 +261,33 @@ export function deleteSong(d: RawDatatables, uniqueId: number): RawDatatables {
   const item = d.musicinfo.items.find((i) => i.uniqueId === uniqueId);
   if (!item) return d;
   const id = item.id;
-  const wordKeys = new Set([`song_${id}`, `song_sub_${id}`, `song_detail_${id}`]);
-  return {
+  const wordKeys = new Set(SONG_WORDLIST_PREFIXES.map((prefix) => songWordlistKey(prefix, id)));
+  let next: RawDatatables = {
     ...d,
     musicinfo: { ...d.musicinfo, items: d.musicinfo.items.filter((i) => i.uniqueId !== uniqueId) },
     musicOrder: { ...d.musicOrder, items: d.musicOrder.items.filter((o) => o.uniqueId !== uniqueId) },
     wordlist: { ...d.wordlist, items: d.wordlist.items.filter((w) => !wordKeys.has(w.key)) },
   };
+  // Companion rows go with the song, or the tables drift out of the 1:1
+  // relationship both dumps hold.
+  for (const field of COMPANION_TABLE_KEYS) {
+    const table = next[field];
+    if (!table) continue;
+    const items = table.items.filter((row) => row.uniqueId !== uniqueId && row.id !== id);
+    if (items.length !== table.items.length) next = { ...next, [field]: { ...table, items } };
+  }
+  return next;
 }
 
-/** Replace one musicinfo item (matched by uniqueId) with a shallow patch. */
+/**
+ * Replace one musicinfo item (matched by uniqueId) with a shallow patch.
+ *
+ * Each value is conformed to the type the row already stores, so an edit never
+ * changes a field's JSON type. `spikeOn*` is the case that needs it: the
+ * Metadata UI drives it from a boolean switch, but JPN 39.06 stores those five
+ * fields as integers, and writing `true` into a file whose other 1,034 rows use
+ * `1` is how this whole class of divergence gets introduced.
+ */
 function patchMusicInfo(
   d: RawDatatables,
   uniqueId: number,
@@ -210,13 +296,15 @@ function patchMusicInfo(
   let changed = false;
   const items = d.musicinfo.items.map((it) => {
     if (it.uniqueId !== uniqueId) return it;
+    const keys = Object.keys(patch) as (keyof MusicInfoItem)[];
+    const conformed: Partial<MusicInfoItem> = {};
+    for (const k of keys) {
+      conformed[k] = conformPatchValue(it[k], patch[k]) as MusicInfoItem[typeof k];
+    }
     // Skip the allocation if every patched value already matches.
-    const same = (Object.keys(patch) as (keyof MusicInfoItem)[]).every(
-      (k) => it[k] === patch[k],
-    );
-    if (same) return it;
+    if (keys.every((k) => it[k] === conformed[k])) return it;
     changed = true;
-    return { ...it, ...patch };
+    return { ...it, ...conformed };
   });
   if (!changed) return d;
   return { ...d, musicinfo: { ...d.musicinfo, items } };
@@ -359,7 +447,7 @@ export function insertMusicOrderEntry(
   const folderOf = makeFolderOf(d);
   // Placement folder is explicit so a song shown outside its canonical genre
   // still lands in the folder the user added it to.
-  const entry: MusicOrderItem = { uniqueId, id: song.id, genreNo };
+  const entry = scaffoldOrderPlacement(d, { uniqueId, id: song.id, genreNo });
   const firstOfGenre = orig.findIndex((o) => folderOf(o) === genreNo);
   const insertAt = firstOfGenre >= 0 ? firstOfGenre : orig.length;
 
@@ -443,7 +531,14 @@ export function sortMusicOrderGenre(
   return { ...d, musicOrder: { ...d.musicOrder, items } };
 }
 
-/** Set one localized wordlist value, scaffolding every game locale if needed. */
+/**
+ * Set one localized wordlist value without changing the open file's schema.
+ *
+ * JPN rows do not carry the Simplified Chinese fields that CHN rows do. An
+ * absent locale is therefore not invented, and a missing title/subtitle row is
+ * scaffolded from the matching row family so its keys, order, and font fields
+ * match the rest of the file.
+ */
 function setLocalizedWord(
   d: RawDatatables,
   key: string,
@@ -453,15 +548,23 @@ function setLocalizedWord(
   const items = d.wordlist.items;
   const idx = items.findIndex((w) => w.key === key);
   if (idx >= 0) {
+    if (!(locale in items[idx])) return d;
     if (items[idx][locale] === value) return d;
     const next = items.slice();
     next[idx] = { ...items[idx], [locale]: value };
     return { ...d, wordlist: { ...d.wordlist, items: next } };
   }
-  // No existing entry — scaffold one with all locales empty, then set this one.
-  const fresh: WordListItem = { key };
-  for (const l of LOCALE_KEYS) fresh[l] = '';
-  fresh[locale] = value;
+  const prefix = SONG_WORDLIST_PREFIXES.find((candidate) => belongsToPrefix(key, candidate));
+  const family = prefix
+    ? (row: WordListItem) => belongsToPrefix(row.key, prefix)
+    : undefined;
+  const keys = shapeKeys(items, { shapeFrom: family, fallback: CHN_WORDLIST_SHAPE });
+  if (!keys.has(locale)) return d;
+  const fresh = scaffoldRow<WordListItem>(
+    items,
+    { key, [locale]: value } as Partial<WordListItem>,
+    { shapeFrom: family, fallback: CHN_WORDLIST_SHAPE },
+  );
   return { ...d, wordlist: { ...d.wordlist, items: [...items, fresh] } };
 }
 

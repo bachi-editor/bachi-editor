@@ -28,6 +28,9 @@ const FILE_KEYS: Record<DatatableName, keyof RawDatatables> = {
   'musicinfo.bin': 'musicinfo',
   'music_order.bin': 'musicOrder',
   'wordlist.bin': 'wordlist',
+  'music_attribute.bin': 'musicAttribute',
+  'music_usbsetting.bin': 'musicUsbSetting',
+  'music_ai_section.bin': 'musicAiSection',
 };
 
 /** Encode a datatable object to its on-disk bytes (JSON → gzip → AES). */
@@ -307,6 +310,9 @@ export async function saveDatatables(
     if (!fd.dirty) continue;
     const name = fd.file;
     const obj = draft[FILE_KEYS[name]];
+    // A companion table the project does not have is never dirty, but never
+    // write `undefined` over a real file if that ever changes.
+    if (!obj) continue;
     const key = datatableKeyOf(root);
     const newBytes = await sealDatatable(obj, key, await datatableStyleOnDisk(root, name, key));
     const original = await readBytes(root.datatable, name);

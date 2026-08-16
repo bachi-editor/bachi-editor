@@ -1,14 +1,20 @@
 import { File as NodeFile } from 'node:buffer';
 import { webcrypto } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { describe, expect, test } from 'vitest';
-import type { MusicInfoItem } from '../../src/codec';
+import { createNus3BankFromTemplate, type MusicInfoItem } from '../../src/codec';
 import type { ProjectRoot } from '../../src/fs/project';
 import {
+  allocateNus3BankId,
   loadSoundFileInfo,
+  nextAvailableNus3BankId,
   removeSoundFile,
   replaceSoundFile,
   resolveSoundFile,
 } from '../../src/fs/sound';
+
+const TEMPLATE_PATH = resolve(__dirname, '../../src/assets/song-template.nus3bank');
 
 Object.defineProperties(globalThis, {
   crypto: { value: webcrypto },
@@ -112,6 +118,21 @@ function fileFromBytes(name: string, ...values: number[]): File {
   return new File([buffer(...values)], name);
 }
 
+async function templateBytes(): Promise<Uint8Array> {
+  const file = await readFile(TEMPLATE_PATH);
+  return new Uint8Array(file.buffer, file.byteOffset, file.byteLength);
+}
+
+async function bankWithId(songId: string, bankId: number): Promise<Uint8Array> {
+  return createNus3BankFromTemplate(await templateBytes(), {
+    songId,
+    uniqueId: 1,
+    bankId,
+    demoStartMs: 0,
+    streamBytes: Uint8Array.of(1, 2, 3, 4),
+  });
+}
+
 describe('sound file resolution', () => {
   test('uses a declared sound path when present', () => {
     expect(resolveSoundFile(song({ songFileName: ' sound\\nested\\custom.nus3bank ' }))).toEqual({
@@ -153,6 +174,28 @@ describe('sound file inspection', () => {
       modified: 1234,
       sha256: '039058c6f2c0',
     });
+  });
+});
+
+describe('nus3bank id allocation', () => {
+  test('uses the fallback for an empty project and otherwise advances past the maximum', () => {
+    expect(nextAvailableNus3BankId([], 77)).toBe(77);
+    expect(nextAvailableNus3BankId([0, 3, 4_100, 12], 77)).toBe(4_101);
+    expect(nextAvailableNus3BankId([0xffff_ffff, 2, 0], 77)).toBe(1);
+  });
+
+  test('reads only bank prefixes, ignores unreadable files, and allocates a collision-free u32 id', async () => {
+    const sound = new MemDir();
+    sound.children.set('song_a.nus3bank', new MemFile('song_a.nus3bank', await bankWithId('a', 12)));
+    sound.children.set('song_b.nus3bank', new MemFile('song_b.nus3bank', await bankWithId('b', 0xfedc_ba98)));
+    sound.children.set('broken.nus3bank', new MemFile('broken.nus3bank', bytes(1, 2, 3)));
+    sound.children.set('readme.txt', new MemFile('readme.txt', bytes(9)));
+
+    await expect(allocateNus3BankId(
+      rootWithSound(sound),
+      ['song_a.nus3bank', 'song_b.nus3bank', 'broken.nus3bank', 'readme.txt'],
+      77,
+    )).resolves.toBe(0xfedc_ba99);
   });
 });
 

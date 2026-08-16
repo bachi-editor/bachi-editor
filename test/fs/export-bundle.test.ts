@@ -49,6 +49,9 @@ function tables(): RawDatatables {
     },
     musicOrder: { items: [{ uniqueId: 1, id: 'aaa', genreNo: 0 }] },
     wordlist: { items: [{ key: 'song_aaa', englishUsText: 'A' }] },
+    musicAttribute: { items: [{ uniqueId: 1, id: 'aaa', ensoBgId: 2 }] },
+    musicUsbSetting: { items: [{ uniqueId: 1, id: 'aaa', usbVer: 3 }] },
+    musicAiSection: { items: [{ uniqueId: 1, id: 'aaa', sectionCount: 4 }] },
   };
 }
 
@@ -78,6 +81,10 @@ function root(files: Map<string, MemFile> = new Map()): ProjectRoot {
   return { datatable: new MemDir(files), keys: KEYS } as unknown as ProjectRoot;
 }
 
+function keylessRoot(files: Map<string, MemFile> = new Map()): ProjectRoot {
+  return { datatable: new MemDir(files) } as unknown as ProjectRoot;
+}
+
 function parts(on: Partial<ServerBundleSelection>): ServerBundleSelection {
   return { musicMetadata: false, musicOrder: false, dan: false, gaiden: false, ...on };
 }
@@ -102,10 +109,16 @@ describe('serverBundlePaths', () => {
     expect(serverBundlePaths('musicMetadata', 'bin')).toEqual([
       'datatable/musicinfo.bin',
       'datatable/wordlist.bin',
+      'datatable/music_attribute.bin',
+      'datatable/music_usbsetting.bin',
+      'datatable/music_ai_section.bin',
     ]);
     expect(serverBundlePaths('musicMetadata', 'json')).toEqual([
       'datatable/musicinfo.json',
       'datatable/wordlist.json',
+      'datatable/music_attribute.json',
+      'datatable/music_usbsetting.json',
+      'datatable/music_ai_section.json',
     ]);
     expect(serverBundlePaths('musicOrder', 'json')).toEqual(['datatable/music_order.json']);
   });
@@ -129,7 +142,10 @@ describe('buildServerBundle', () => {
     const zip = unzipSync(bundle.bytes);
     expect(Object.keys(zip).sort()).toEqual([
       'README.txt',
+      'datatable/music_ai_section.bin',
+      'datatable/music_attribute.bin',
       'datatable/music_order.bin',
+      'datatable/music_usbsetting.bin',
       'datatable/musicinfo.bin',
       'datatable/wordlist.bin',
     ]);
@@ -137,6 +153,9 @@ describe('buildServerBundle', () => {
     await expect(decodeBin(zip['datatable/musicinfo.bin'])).resolves.toEqual(datatables.musicinfo);
     await expect(decodeBin(zip['datatable/music_order.bin'])).resolves.toEqual(datatables.musicOrder);
     await expect(decodeBin(zip['datatable/wordlist.bin'])).resolves.toEqual(datatables.wordlist);
+    await expect(decodeBin(zip['datatable/music_attribute.bin'])).resolves.toEqual(datatables.musicAttribute);
+    await expect(decodeBin(zip['datatable/music_usbsetting.bin'])).resolves.toEqual(datatables.musicUsbSetting);
+    await expect(decodeBin(zip['datatable/music_ai_section.bin'])).resolves.toEqual(datatables.musicAiSection);
     expect(decoder.decode(zip['README.txt'])).toContain('unsaved Bachi drafts');
   });
 
@@ -165,18 +184,59 @@ describe('buildServerBundle', () => {
     const datatables = tables();
     const bundle = await buildServerBundle(request({
       format: 'json',
-      sources: { project: { root: root(), datatables } },
+      sources: { project: { root: keylessRoot(), datatables } },
     }));
 
     const zip = unzipSync(bundle.bytes);
     expect(Object.keys(zip).sort()).toEqual([
       'README.txt',
+      'datatable/music_ai_section.json',
+      'datatable/music_attribute.json',
       'datatable/music_order.json',
+      'datatable/music_usbsetting.json',
       'datatable/musicinfo.json',
       'datatable/wordlist.json',
     ]);
     expect(decoder.decode(zip['datatable/musicinfo.json'])).toBe(JSON.stringify(datatables.musicinfo, null, 2));
     expect(JSON.parse(decoder.decode(zip['datatable/wordlist.json']))).toEqual(datatables.wordlist);
+    expect(JSON.parse(decoder.decode(zip['datatable/music_attribute.json']))).toEqual(datatables.musicAttribute);
+    expect(JSON.parse(decoder.decode(zip['datatable/music_usbsetting.json']))).toEqual(datatables.musicUsbSetting);
+    expect(JSON.parse(decoder.decode(zip['datatable/music_ai_section.json']))).toEqual(datatables.musicAiSection);
+  });
+
+  test.skipIf(!HAS_KEYS)('a bin metadata bundle rejects a missing companion table', async () => {
+    const incomplete = tables();
+    delete incomplete.musicAiSection;
+
+    await expect(buildServerBundle(request({
+      format: 'bin',
+      parts: parts({ musicMetadata: true }),
+      sources: { project: { root: root(), datatables: incomplete } },
+    }))).rejects.toThrow(/music_ai_section\.bin.*not loaded/i);
+  });
+
+  test('a keyless JSON metadata bundle rejects a missing companion table', async () => {
+    const incomplete = tables();
+    delete incomplete.musicAiSection;
+
+    await expect(buildServerBundle(request({
+      format: 'json',
+      parts: parts({ musicMetadata: true }),
+      sources: { project: { root: keylessRoot(), datatables: incomplete } },
+    }))).rejects.toThrow(/music_ai_section\.bin.*not loaded/i);
+  });
+
+  test('an order-only bundle excludes every metadata table', async () => {
+    const bundle = await buildServerBundle(request({
+      format: 'json',
+      parts: parts({ musicOrder: true }),
+      sources: { project: { root: root(), datatables: tables() } },
+    }));
+
+    expect(Object.keys(unzipSync(bundle.bytes)).sort()).toEqual([
+      'README.txt',
+      'datatable/music_order.json',
+    ]);
   });
 
   test('only the selected parts are written', async () => {
@@ -226,7 +286,7 @@ describe('buildServerBundle', () => {
   });
 
   test('an empty selection is rejected rather than zipping a lone README', async () => {
-    await expect(buildServerBundle(request({ parts: parts({}) }))).rejects.toThrow(/[Nn]othing/);
+    await expect(buildServerBundle(request({ format: 'json', parts: parts({}) }))).rejects.toThrow(/[Nn]othing/);
   });
 
   test('the README lists every file and names the target path', async () => {

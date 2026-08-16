@@ -134,7 +134,13 @@ import { CHART_METADATA_FIELDS, chartMetadataPatchAfterEdit, clonedDifficultyMet
 /** Branch-editing focus: 'all' or one of the three branch tracks. */
 export type BranchFocus = 'all' | 0 | 1 | 2;
 import { diffDatatables, ProjectDiff } from './diff';
-import { scopedDatatables, orderScopeDirty, songsDatatableDirty, type SaveScope } from './saveScope';
+import {
+  orderScopeDirty,
+  rebaselineAfterSave,
+  scopedDatatables,
+  songsDatatableDirty,
+  type SaveScope,
+} from './saveScope';
 import {
   collectFumenDiffs,
   FumenBaseline,
@@ -2434,15 +2440,8 @@ export const useAppStore = create<AppState>((set, get) => {
       const cur2 = get().project;
       if (cur2.kind !== 'open') return;
       const p2 = cur2.project;
-      const savedDraft = scopedDatatables(p2.baseline, p2.datatables, scope);
-      const nextBaseline = isSongs
-        ? {
-            ...p2.baseline,
-            musicinfo: p2.datatables.musicinfo,
-            wordlist: p2.datatables.wordlist,
-            musicOrder: savedDraft.musicOrder,
-          }
-        : { ...p2.baseline, musicOrder: p2.datatables.musicOrder };
+      if (p2.root !== p.root) return;
+      const nextBaseline = rebaselineAfterSave(p2.baseline, scopedDraft, scope);
       const fumenBaselines = new Map(p2.fumenBaselines);
       const fumenDrafts = new Map(p2.fumenDrafts);
       const soundMetadataBaselines = new Map(p2.soundMetadataBaselines);

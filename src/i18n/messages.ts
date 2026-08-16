@@ -1588,10 +1588,10 @@ export const messages = {
     'zh-Hans': '歌曲 ID {id} · 歌曲编号 {no}', 'zh-Hant': '歌曲 ID {id} · 歌曲編號 {no}',
   },
   'deletesong.confirm': {
-    en: 'Remove {title} from musicinfo, music_order and wordlist?',
-    ja: '{title} を musicinfo・music_order・wordlist から削除しますか？',
-    'zh-Hans': '从 musicinfo、music_order 和 wordlist 中移除 {title}？',
-    'zh-Hant': '從 musicinfo、music_order 和 wordlist 中移除 {title}？',
+    en: 'Remove {title} from the song catalogue, order, wordlist and companion tables?',
+    ja: '{title} を楽曲カタログ・曲順・ワードリスト・補助テーブルから削除しますか？',
+    'zh-Hans': '从歌曲目录、顺序、词条表和配套数据表中移除 {title}？',
+    'zh-Hant': '從歌曲目錄、順序、詞條表和配套資料表中移除 {title}？',
   },
   'deletesong.filesBoth': {
     en: 'On save, its chart folder and sound file will be permanently removed from disk.',
@@ -1638,10 +1638,10 @@ export const messages = {
     'zh-Hans': '乐曲元数据', 'zh-Hant': '樂曲中繼資料',
   },
   'export.part.musicMetadataSum': {
-    en: 'Song entries, star ratings and scoring, plus every localized title and subtitle.',
-    ja: '楽曲エントリ、星の数とスコア設定、および各言語のタイトル・サブタイトル。',
-    'zh-Hans': '乐曲条目、星级与配分，以及各语言的标题和副标题。',
-    'zh-Hant': '樂曲條目、星級與配分，以及各語言的標題和副標題。',
+    en: 'Song entries, gameplay companion settings, ratings, scoring and localized text.',
+    ja: '楽曲エントリ、ゲーム用補助設定、難易度、スコア設定、各言語のテキスト。',
+    'zh-Hans': '乐曲条目、游戏配套设置、难度、配分和本地化文本。',
+    'zh-Hant': '樂曲條目、遊戲配套設定、難度、配分和本地化文字。',
   },
   'export.part.musicOrder': { en: 'Music order', ja: '曲順', 'zh-Hans': '乐曲顺序', 'zh-Hant': '樂曲順序' },
   'export.part.musicOrderSum': {
@@ -1669,6 +1669,12 @@ export const messages = {
     ja: 'ゲームプロジェクトが開かれていません。エクスポートするには設定から開いてください。',
     'zh-Hans': '未打开游戏项目——请在设置中打开一个后再导出。',
     'zh-Hant': '未開啟遊戲專案——請在設定中開啟一個後再匯出。',
+  },
+  'export.needCompanionTables': {
+    en: 'One or more companion music tables could not be loaded, so this bundle would be incomplete.',
+    ja: '楽曲の補助テーブルを読み込めなかったため、不完全なバンドルは出力できません。',
+    'zh-Hans': '一个或多个乐曲配套数据表无法加载，因此不能导出不完整的捆绑包。',
+    'zh-Hant': '一個或多個樂曲配套資料表無法載入，因此不能匯出不完整的套件。',
   },
   'export.needDaniFile': {
     en: 'This file is not open — load it on the Dani Dojo page to export it.',

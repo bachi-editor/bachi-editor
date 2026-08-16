@@ -117,16 +117,28 @@ export function ExportDialog() {
   // simply not loaded; an empty one has nothing worth sending to the server.
   const danIssue = (slot: typeof normal): PartIssue =>
     !slot.loaded ? 'export.needDaniFile' : slot.draft.length === 0 ? 'export.emptyDaniFile' : undefined;
+  const hasCompanionTables = Boolean(
+    open?.datatables.musicAttribute
+    && open.datatables.musicUsbSetting
+    && open.datatables.musicAiSection,
+  );
 
   const issues: Record<ServerBundlePart, PartIssue> = {
-    musicMetadata: open ? undefined : 'export.needProject',
+    musicMetadata: !open
+      ? 'export.needProject'
+      : hasCompanionTables ? undefined : 'export.needCompanionTables',
     musicOrder: open ? undefined : 'export.needProject',
     dan: danIssue(normal),
     gaiden: danIssue(gaiden),
   };
 
   const dirty: Record<ServerBundlePart, boolean> = {
-    musicMetadata: fileDirty('musicinfo.bin') || fileDirty('wordlist.bin'),
+    musicMetadata:
+      fileDirty('musicinfo.bin')
+      || fileDirty('wordlist.bin')
+      || fileDirty('music_attribute.bin')
+      || fileDirty('music_usbsetting.bin')
+      || fileDirty('music_ai_section.bin'),
     musicOrder: fileDirty('music_order.bin'),
     dan: danSectionEdited(normal),
     gaiden: danSectionEdited(gaiden),

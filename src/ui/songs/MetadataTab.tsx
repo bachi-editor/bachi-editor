@@ -85,8 +85,14 @@ function numericValue(item: MusicInfoItem | undefined, field: keyof MusicInfoIte
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+/**
+ * Read a flag that some dumps store as a boolean and others as an integer —
+ * `spikeOn*` is `false`/`true` in CHN and `0`/`1`/`2` in JPN. Writing back is
+ * conformed to the row's own type in model/edits.ts.
+ */
 function booleanValue(item: MusicInfoItem | undefined, field: keyof MusicInfoItem): boolean {
-  return item?.[field] === true;
+  const value = item?.[field];
+  return value === true || (typeof value === 'number' && value !== 0);
 }
 
 function BooleanSwitch({

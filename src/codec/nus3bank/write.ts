@@ -129,6 +129,17 @@ export interface CreateNus3BankOptions {
   uniqueId: number;
   demoStartMs: number;
   streamBytes: Uint8Array;
+  /**
+   * Value for the id field that follows the BINF name. It is *not* the Song
+   * No.: across the 1,203 JPN 39.06 banks it is a per-bank id in 0..3,404 that
+   * matches `musicinfo.uniqueId` on none of the 1,120 song banks, and the game
+   * loads it into its bank record. TaikoSoundEditor writes the Song No. here
+   * and we inherited that, which makes a new bank collide with a shipped one
+   * whenever the Song No. falls inside the shipped id range. The app scans the
+   * existing BINF prefixes and passes an id beyond the dump's maximum; the Song
+   * No. remains a compatibility default for direct codec callers.
+   */
+  bankId?: number;
 }
 
 function assertTemplate(template: Uint8Array): void {
@@ -142,16 +153,39 @@ function assertTemplate(template: Uint8Array): void {
   }
 }
 
-function makeBinfPayload(template: Uint8Array, toneName: string, uniqueId: number): Uint8Array {
-  const nameLength = toneName.length;
-  const nameArea = align4(1 + nameLength);
+/**
+ * Names in BINF/TONE are length-prefixed *and* NUL-terminated, and the declared
+ * length counts the terminator: `song_10jiku` (11 chars) ships as `0x0c` + 11
+ * bytes + NUL. All 1,120 CHN and 1,120 JPN corpus song banks do this, as does
+ * the bundled template.
+ *
+ * This is not cosmetic. The game reads the BINF name with
+ * `memcpy(malloc(len + 1), nameBytes, len + 1)`, so a length of `strlen`
+ * copies one byte *past* the string and leaves the result unterminated —
+ * `song_25tsha` came back as `"song_25tsha\xe7"`. Because the name area is
+ * `align4(1 + declaredLength)`, a `strlen` prefix also leaves no padding
+ * whenever `strlen % 4 === 3`, which is every six-character song id.
+ */
+function nameFieldLength(toneName: string): number {
+  return toneName.length + 1;
+}
+
+/** Write `[u8 declaredLength][ascii][NUL]` and zero-fill to the 4-byte area. */
+function writeNameField(out: Uint8Array, offset: number, toneName: string): number {
+  const declaredLength = nameFieldLength(toneName);
+  out[offset] = declaredLength;
+  ascii(out, offset + 1, toneName);
+  out[offset + 1 + toneName.length] = 0;
+  return align4(1 + declaredLength);
+}
+
+function makeBinfPayload(template: Uint8Array, toneName: string, bankId: number): Uint8Array {
+  const nameArea = align4(1 + nameFieldLength(toneName));
   const out = new Uint8Array(8 + nameArea + 4);
   out.set(template.subarray(156, 164), 0);
-  out[8] = nameLength;
-  ascii(out, 9, toneName);
+  writeNameField(out, 8, toneName);
   const view = dataView(out);
-  view.setUint16(8 + nameArea, uniqueId, true);
-  view.setUint16(8 + nameArea + 2, 0, true);
+  view.setUint32(8 + nameArea, bankId, true);
   return out;
 }
 
@@ -170,11 +204,10 @@ function makeTonePayload(
   const oldDescriptorBase = 12 + align4(1 + oldNameLength);
   const oldSuffix = template.subarray(oldRecordOffset + oldDescriptorBase, oldRecordOffset + oldRecordSize);
 
-  const descriptorBase = 12 + align4(1 + toneName.length);
+  const descriptorBase = 12 + align4(1 + nameFieldLength(toneName));
   const record = new Uint8Array(descriptorBase + oldSuffix.length);
   record.set(template.subarray(oldRecordOffset, oldRecordOffset + 12), 0);
-  record[12] = toneName.length;
-  ascii(record, 13, toneName);
+  writeNameField(record, 12, toneName);
   record.set(oldSuffix, descriptorBase);
   const recordView = dataView(record);
   recordView.setUint32(descriptorBase + 8, 0, true);
@@ -201,9 +234,14 @@ export function createNus3BankFromTemplate(
   assertTemplate(template);
   if (!/^[a-z0-9_]+$/.test(options.songId)) throw new Error('The song id is not nus3bank-safe.');
   const toneName = `song_${options.songId}`;
-  if (toneName.length > 255) throw new Error('The song id is too long for a nus3bank tone name.');
+  // The declared length counts the NUL, so the usable name is one shorter.
+  if (nameFieldLength(toneName) > 255) throw new Error('The song id is too long for a nus3bank tone name.');
   if (!Number.isInteger(options.uniqueId) || options.uniqueId < 0 || options.uniqueId > 0xffff) {
     throw new Error('The Song No. does not fit the nus3bank BINF field.');
+  }
+  const bankId = options.bankId ?? options.uniqueId;
+  if (!Number.isInteger(bankId) || bankId < 0 || bankId > 0xffff_ffff) {
+    throw new Error('The bank id does not fit the nus3bank BINF field.');
   }
   if (options.streamBytes.length === 0) throw new Error('Cannot create a bank with an empty stream.');
   const demoStartMs = Math.max(0, Math.min(60 * 60 * 1000, Math.round(options.demoStartMs)));
@@ -212,7 +250,7 @@ export function createNus3BankFromTemplate(
   for (const section of TEMPLATE_SECTIONS.slice(0, -1)) {
     payloads.set(section.id, template.slice(section.offset + 8, section.offset + 8 + section.size));
   }
-  payloads.set('BINF', makeBinfPayload(template, toneName, options.uniqueId));
+  payloads.set('BINF', makeBinfPayload(template, toneName, bankId));
   payloads.set('TONE', makeTonePayload(template, toneName, options.streamBytes.length, demoStartMs));
   payloads.set('PACK', options.streamBytes);
 

@@ -75,6 +75,9 @@ const DATATABLE_FILES = {
   musicMetadata: [
     { name: 'musicinfo.bin', key: 'musicinfo' },
     { name: 'wordlist.bin', key: 'wordlist' },
+    { name: 'music_attribute.bin', key: 'musicAttribute' },
+    { name: 'music_usbsetting.bin', key: 'musicUsbSetting' },
+    { name: 'music_ai_section.bin', key: 'musicAiSection' },
   ],
   musicOrder: [{ name: 'music_order.bin', key: 'musicOrder' }],
 } as const satisfies Record<string, readonly { name: DatatableName; key: keyof RawDatatables }[]>;
@@ -152,16 +155,19 @@ export async function buildServerBundle(req: ServerBundleRequest): Promise<Serve
 
   const { project } = req.sources;
   if (project) {
-    // One key lookup for the whole run: a project without its datatable key
-    // could not have been opened, so this throwing here is a real error.
-    const keyHex = datatableKeyOf(project.root);
+    // Plain JSON needs no game key; sealed .bin output resolves it once for the
+    // whole run.
+    const keyHex = req.format === 'bin' ? datatableKeyOf(project.root) : undefined;
     for (const part of ['musicMetadata', 'musicOrder'] as const) {
       if (!req.parts[part]) continue;
       for (const file of DATATABLE_FILES[part]) {
         const obj = project.datatables[file.key];
+        if (!obj) {
+          throw new Error(`Cannot export ${file.name}: the table was not loaded from this project.`);
+        }
         if (req.format === 'bin') {
-          const style = await datatableStyleOnDisk(project.root, file.name, keyHex);
-          add(`${DATATABLE_DIR}/${file.name}`, await sealDatatable(obj, keyHex, style));
+          const style = await datatableStyleOnDisk(project.root, file.name, keyHex!);
+          add(`${DATATABLE_DIR}/${file.name}`, await sealDatatable(obj, keyHex!, style));
         } else {
           add(`${DATATABLE_DIR}/${jsonName(file.name)}`, encodeJsonPayload(obj, 2));
         }
