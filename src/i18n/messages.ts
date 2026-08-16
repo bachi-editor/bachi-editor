@@ -223,6 +223,31 @@ export const messages = {
     'zh-Hant': '變更',
   },
 
+  'setup.gameVersion.title': {
+    en: 'Game version',
+    ja: 'ゲームバージョン',
+    'zh-Hans': '游戏版本',
+    'zh-Hant': '遊戲版本',
+  },
+  'setup.gameVersion.hint': {
+    en: 'Required because CHN and JPN store some fields differently. Choose the version that produced this Data folder.',
+    ja: 'CHN 版と JPN 版では一部のフィールド形式が異なるため必須です。この Data フォルダーのゲームバージョンを選択してください。',
+    'zh-Hans': 'CHN 版和 JPN 版的部分字段格式不同，因此必须选择。请选择生成此 Data 文件夹的游戏版本。',
+    'zh-Hant': 'CHN 版和 JPN 版的部分欄位格式不同，因此必須選擇。請選擇產生此 Data 資料夾的遊戲版本。',
+  },
+  'setup.gameVersion.chn': {
+    en: 'China version (CHN)',
+    ja: '中国版（CHN）',
+    'zh-Hans': '中国版（CHN）',
+    'zh-Hant': '中國版（CHN）',
+  },
+  'setup.gameVersion.jpn': {
+    en: 'Japan version (JPN)',
+    ja: '日本版（JPN）',
+    'zh-Hans': '日本版（JPN）',
+    'zh-Hant': '日本版（JPN）',
+  },
+
   'setup.step2.datatableKey': {
     en: 'Datatable key',
     ja: 'データテーブルキー',
@@ -268,6 +293,12 @@ export const messages = {
     'zh-Hans': '该文件夹看起来不是 Taiko 安装目录——请选择游戏的 Data 文件夹（其中应包含带 datatable/、fumen/、sound/ 的 x64/）。',
     'zh-Hant': '此資料夾看起來不是 Taiko 安裝目錄——請選擇遊戲的 Data 資料夾（其中應包含帶 datatable/、fumen/、sound/ 的 x64/）。',
   },
+  'setup.error.gameVersionMismatch': {
+    en: 'You selected {selected}, but this project’s datatables match {detected}. Choose {detected} and try again.',
+    ja: '{selected} が選択されていますが、このプロジェクトのデータテーブルは {detected} と一致します。{detected} を選択して、もう一度お試しください。',
+    'zh-Hans': '已选择{selected}，但此项目的数据表与{detected}匹配。请选择{detected}后重试。',
+    'zh-Hant': '已選擇{selected}，但此專案的資料表與{detected}相符。請選擇{detected}後重試。',
+  },
   'setup.error.datatableKey': {
     en: 'The datatable key looks incorrect — the datatables didn’t decrypt.',
     ja: 'データテーブルキーが正しくないようです（データテーブルを復号できませんでした）。',
@@ -299,10 +330,10 @@ export const messages = {
     'zh-Hant': '開啟專案時發生問題。',
   },
   'setup.error.checkHint': {
-    en: 'Double-check both keys and the selected folder, then try again.',
-    ja: '両方のキーと選択したフォルダーを確認してから、もう一度お試しください。',
-    'zh-Hans': '请核对两个密钥和所选文件夹，然后重试。',
-    'zh-Hant': '請核對兩個金鑰和所選資料夾，然後重試。',
+    en: 'Double-check the game version, both keys, and the selected folder, then try again.',
+    ja: 'ゲームバージョン、両方のキー、選択したフォルダーを確認してから、もう一度お試しください。',
+    'zh-Hans': '请核对游戏版本、两个密钥和所选文件夹，然后重试。',
+    'zh-Hant': '請核對遊戲版本、兩個金鑰和所選資料夾，然後重試。',
   },
 
   // Remembered folder (permission lapsed)
@@ -338,10 +369,10 @@ export const messages = {
     'zh-Hans': '游戏项目', 'zh-Hant': '遊戲專案',
   },
   'settings.project.hint': {
-    en: 'The folder and both AES keys are required to load and save game data.',
-    ja: 'ゲームデータの読み込みと保存には、フォルダーと 2 つの AES キーが必要です。',
-    'zh-Hans': '加载和保存游戏数据需要文件夹和两个 AES 密钥。',
-    'zh-Hant': '載入和儲存遊戲資料需要資料夾和兩個 AES 金鑰。',
+    en: 'The game version, folder, and both AES keys are required to load and save game data.',
+    ja: 'ゲームデータの読み込みと保存には、ゲームバージョン、フォルダー、2 つの AES キーが必要です。',
+    'zh-Hans': '加载和保存游戏数据需要游戏版本、文件夹和两个 AES 密钥。',
+    'zh-Hant': '載入和儲存遊戲資料需要遊戲版本、資料夾和兩個 AES 金鑰。',
   },
   'settings.project.open': {
     en: 'Project open', ja: 'プロジェクトを開いています',

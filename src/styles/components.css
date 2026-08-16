@@ -1032,6 +1032,28 @@
 .tk-settings-section-head p { margin:4px 0 0; max-width:500px; font-size:12.5px; line-height:1.45; color:var(--ink-3); }
 .tk-settings-fields { display:flex; flex-direction:column; gap:12px; padding:16px 20px 18px; }
 .tk-settings-fields .tk-field { margin:0; }
+.tk-settings-version { min-width:0; margin:0; padding:0; border:0; }
+.tk-settings-version legend {
+  padding:0; font-size:11px; font-weight:600; letter-spacing:.3px;
+  text-transform:uppercase; color:var(--ink-3);
+}
+.tk-settings-version-hint {
+  margin:5px 0 8px; font-size:12px; line-height:1.45; color:var(--ink-3);
+}
+.tk-settings-version-options { display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:8px; }
+.tk-settings-version-option {
+  display:flex; align-items:center; gap:9px; min-width:0; padding:9px 11px;
+  border:1px solid var(--line-2); border-radius:var(--r-sm); background:var(--panel-2);
+  color:var(--ink-2); font-size:12.5px; font-weight:600; cursor:pointer;
+}
+.tk-settings-version-option:hover { border-color:var(--ink-3); background:var(--panel-3); }
+.tk-settings-version-option:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent-soft); }
+.tk-settings-version-option.selected { border-color:var(--accent); background:var(--accent-soft); color:var(--ink); }
+.tk-settings-version-option input {
+  flex:0 0 auto; width:15px; height:15px; margin:0; accent-color:var(--accent);
+}
+.tk-settings-version[aria-invalid="true"] .tk-settings-version-option { border-color:var(--don); }
+.tk-settings-version:disabled .tk-settings-version-option { opacity:.55; cursor:not-allowed; }
 .tk-settings-actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .tk-settings-ok { display:inline-flex; align-items:center; gap:5px; color:var(--ok); font-size:11px; font-weight:700; white-space:nowrap; }
 /* Close-project confirmation — inline in the action row instead of a second modal. */

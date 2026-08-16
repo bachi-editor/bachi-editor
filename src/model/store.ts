@@ -13,7 +13,7 @@ import {
   clearDaniFileHandle,
   clearProjectRootHandle,
   loadDaniFileHandle,
-  loadProjectRootHandle,
+  loadProjectRootRecord,
   saveDaniFileHandle,
   saveProjectRootHandle,
 } from '../fs/idb';
@@ -127,7 +127,7 @@ import {
   updateFumenHeader,
   type BranchInfo,
 } from './fumenEdits';
-import type { Fumen, FumenNote, MusicInfoChartDerivedPatch, MusicInfoEditablePatch } from '../codec';
+import type { Fumen, FumenNote, GameVersion, MusicInfoChartDerivedPatch, MusicInfoEditablePatch } from '../codec';
 import { adjacentNote, firstNoteInMeasure } from './fumenNavigation';
 import { CHART_METADATA_FIELDS, chartMetadataPatchAfterEdit, clonedDifficultyMetadataPatch } from './fumenMetadata';
 
@@ -500,7 +500,7 @@ function songIndexAfterDatatableChange(
 export type ProjectStatus =
   | { kind: 'idle' }
   | { kind: 'opening' }
-  | { kind: 'needs-permission'; handle: FileSystemDirectoryHandle }
+  | { kind: 'needs-permission'; handle: FileSystemDirectoryHandle; gameVersion?: GameVersion }
   | { kind: 'open'; project: OpenProject }
   | { kind: 'error'; message: string };
 
@@ -518,13 +518,16 @@ export type SaveStatus =
 
 /**
  * Transient state for the "open a project" Settings form: the picked
- * (or remembered) folder, the two pasted keys, busy, and the last validation
- * error. Lives in the store — not component state — so the form survives the
- * async open probe and an error preserves what the user typed.
+ * (or remembered) folder, selected game version, the two pasted keys, busy,
+ * and the last validation error. Lives in the store — not component state —
+ * so the form survives the async open probe and an error preserves what the
+ * user typed.
  */
 export interface ProjectSetup {
   handle?: FileSystemDirectoryHandle;
   folderName?: string;
+  /** Game data schema selected for this candidate project. */
+  gameVersion?: GameVersion;
   /** True when `handle` came from a remembered folder (may need a permission re-grant). */
   remembered: boolean;
   datatableKey: string;
@@ -599,7 +602,9 @@ interface AppState {
   setupPickFolder: () => Promise<void>;
   /** Step 2: update one of the two pasted keys (clears the error). */
   setupSetKey: (which: 'datatable' | 'fumen', value: string) => void;
-  /** Step 3: validate the folder + keys, then open (or set setup.error). */
+  /** Select the game data schema for the candidate project (clears the error). */
+  setupSetGameVersion: (version: GameVersion) => void;
+  /** Step 3: validate the folder + version + keys, then open (or set setup.error). */
   setupOpenProject: () => Promise<void>;
   reconnect: () => Promise<void>;
   forgetProject: () => Promise<void>;
@@ -811,11 +816,12 @@ async function openProjectFromRoot(root: ProjectRoot): Promise<OpenProject> {
 async function openRememberedProject(
   handle: FileSystemDirectoryHandle,
   keys: ProjectKeys,
+  gameVersion: GameVersion,
 ): Promise<{ ok: true; project: OpenProject } | { ok: false; error: OpenValidationError }> {
-  const res = await openProjectWithKeys(handle, keys);
+  const res = await openProjectWithKeys(handle, keys, gameVersion);
   if (!res.ok) return res;
   const project = await openProjectFromRoot(res.root);
-  await saveProjectRootHandle(res.root.handle);
+  await saveProjectRootHandle(res.root.handle, gameVersion);
   if (res.root.keys) persistKeys(res.root.keys);
   return { ok: true, project };
 }
@@ -1292,43 +1298,50 @@ export const useAppStore = create<AppState>((set, get) => {
 
   initFromStoredHandle: async () => {
     if (!get().support.ok) return;
-    const stored = await loadProjectRootHandle();
+    const stored = await loadProjectRootRecord();
     if (!stored) return;
-    const perm = await queryRead(stored);
+    const { handle, gameVersion } = stored;
+    const perm = await queryRead(handle);
     if (perm !== 'granted') {
-      set({ project: { kind: 'needs-permission', handle: stored } });
+      set({ project: { kind: 'needs-permission', handle, gameVersion } });
       return;
     }
-    // Folder is remembered and readable. If we also remember the keys, open
-    // silently; otherwise seed the setup form with the folder so the user just
-    // pastes keys and clicks Open.
+    // Folder is remembered and readable. Silent open requires both keys and an
+    // explicitly remembered game version. A legacy handle-only record seeds the
+    // form instead, so it can never bypass the version choice.
     const keys = loadStoredKeys();
     const seedSetup = (error?: OpenValidationError) =>
       set({
         project: { kind: 'idle' },
         setup: {
           ...get().setup,
-          handle: stored,
-          folderName: stored.name,
+          handle,
+          folderName: handle.name,
+          gameVersion,
           remembered: true,
           datatableKey: keys.datatable || get().setup.datatableKey,
           fumenKey: keys.fumen || get().setup.fumenKey,
           error,
         },
+        // A legacy handle has no version to auto-open with. Put the required
+        // migration choice in front of the returning user instead of leaving
+        // it hidden behind the overflow menu.
+        ui: { ...get().ui, settingsOpen: true },
       });
-    if (!hasStoredKeys(keys)) {
+    if (!hasStoredKeys(keys) || !gameVersion) {
       seedSetup();
       return;
     }
     set({ project: { kind: 'opening' } });
-    const res = await openRememberedProject(stored, keys);
+    const res = await openRememberedProject(handle, keys, gameVersion);
     if (res.ok) {
       set({
         project: { kind: 'open', project: res.project },
         setup: {
           ...get().setup,
-          handle: stored,
-          folderName: stored.name,
+          handle,
+          folderName: handle.name,
+          gameVersion,
           remembered: true,
           datatableKey: keys.datatable,
           fumenKey: keys.fumen,
@@ -1347,7 +1360,14 @@ export const useAppStore = create<AppState>((set, get) => {
       return;
     }
     set({
-      setup: { ...get().setup, handle: res.handle, folderName: res.handle.name, remembered: false, error: undefined },
+      setup: {
+        ...get().setup,
+        handle: res.handle,
+        folderName: res.handle.name,
+        gameVersion: undefined,
+        remembered: false,
+        error: undefined,
+      },
     });
   },
 
@@ -1357,25 +1377,30 @@ export const useAppStore = create<AppState>((set, get) => {
     set({ setup: { ...s, ...patch, error: undefined } });
   },
 
+  setupSetGameVersion: (gameVersion) => {
+    set({ setup: { ...get().setup, gameVersion, error: undefined } });
+  },
+
   setupOpenProject: async () => {
     const s = get().setup;
-    if (!s.handle || s.busy) return;
+    if (!s.handle || !s.gameVersion || s.busy) return;
+    const gameVersion = s.gameVersion;
     set({ setup: { ...s, busy: true, error: undefined } });
     const keys: ProjectKeys = { datatable: s.datatableKey.trim(), fumen: s.fumenKey.trim() };
-    const res = await openProjectWithKeys(s.handle, keys);
+    const res = await openProjectWithKeys(s.handle, keys, gameVersion);
     if (!res.ok) {
       set({ setup: { ...get().setup, busy: false, error: res.error } });
       return;
     }
     try {
       const project = await openProjectFromRoot(res.root);
-      await saveProjectRootHandle(res.root.handle);
+      await saveProjectRootHandle(res.root.handle, gameVersion);
       if (res.root.keys) persistKeys(res.root.keys);
       // Settings stays open on purpose: opening and closing a project are both
       // done from there, so the dialog is the user's place to stand.
       set({
         project: { kind: 'open', project },
-        setup: { ...get().setup, busy: false, remembered: true, error: undefined },
+        setup: { ...get().setup, gameVersion, busy: false, remembered: true, error: undefined },
       });
     } catch (e) {
       set({ setup: { ...get().setup, busy: false, error: { field: 'generic', message: (e as Error).message } } });
@@ -1398,18 +1423,20 @@ export const useAppStore = create<AppState>((set, get) => {
           ...get().setup,
           handle: cur.handle,
           folderName: cur.handle.name,
+          gameVersion: cur.gameVersion,
           remembered: true,
           datatableKey: keys.datatable || get().setup.datatableKey,
           fumenKey: keys.fumen || get().setup.fumenKey,
           error,
         },
+        ui: { ...get().ui, settingsOpen: true },
       });
-    if (!hasStoredKeys(keys)) {
+    if (!hasStoredKeys(keys) || !cur.gameVersion) {
       seedSetup();
       return;
     }
     set({ project: { kind: 'opening' } });
-    const res = await openRememberedProject(cur.handle, keys);
+    const res = await openRememberedProject(cur.handle, keys, cur.gameVersion);
     if (res.ok) {
       set({
         project: { kind: 'open', project: res.project },
@@ -1417,6 +1444,7 @@ export const useAppStore = create<AppState>((set, get) => {
           ...get().setup,
           handle: cur.handle,
           folderName: cur.handle.name,
+          gameVersion: cur.gameVersion,
           remembered: true,
           datatableKey: keys.datatable,
           fumenKey: keys.fumen,
@@ -1439,7 +1467,15 @@ export const useAppStore = create<AppState>((set, get) => {
       fumen: { kind: 'idle' },
       save: { kind: 'idle' },
       // Reset the setup form back to step 1 (keys stay prefilled from storage).
-      setup: { ...get().setup, handle: undefined, folderName: undefined, remembered: false, busy: false, error: undefined },
+      setup: {
+        ...get().setup,
+        handle: undefined,
+        folderName: undefined,
+        gameVersion: undefined,
+        remembered: false,
+        busy: false,
+        error: undefined,
+      },
       ui: {
         ...get().ui,
         saveDialogOpen: false,
@@ -1769,7 +1805,7 @@ export const useAppStore = create<AppState>((set, get) => {
   addSong: (song) => {
     const cur = get().project;
     if (cur.kind !== 'open') return;
-    applyEdit((d) => editsAddSong(d, song));
+    applyEdit((d) => editsAddSong(d, song, cur.project.root.gameVersion));
     // If it landed, jump to it on the Metadata tab so the user can fill it in.
     const after = get().project;
     if (after.kind !== 'open') return;
@@ -2266,7 +2302,7 @@ export const useAppStore = create<AppState>((set, get) => {
       }
 
       const datatables = options.metadata
-        ? applyTjaImportMetadata(p.datatables, uniqueId, songId, imported)
+        ? applyTjaImportMetadata(p.datatables, uniqueId, songId, imported, p.root.gameVersion)
         : p.datatables;
 
       const nextProject: OpenProject = {

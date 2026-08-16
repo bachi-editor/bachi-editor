@@ -9,9 +9,14 @@
 // makes them trivially unit-testable and keeps the byte-perfect guarantees
 // (only re-serialise what changed) easy to reason about.
 
-import { COMPANION_TABLE_KEYS, type RawDatatables } from '../fs/datatables';
+import {
+  COMPANION_TABLE_KEYS,
+  type CompanionTableKey,
+  type RawDatatables,
+} from '../fs/datatables';
 import type {
   CompanionSongItem,
+  GameVersion,
   MusicInfoChartDerivedPatch,
   MusicInfoEditablePatch,
   MusicInfoItem,
@@ -83,9 +88,9 @@ export function nextUniqueId(d: RawDatatables): number {
 
 /**
  * Shapes used only when the target file has no rows at all to copy from — a
- * brand-new or emptied datatable. Real projects always scaffold from their own
- * rows; these keep `addSong` working on an empty table and are deliberately the
- * CHN shapes the editor was originally built against.
+ * brand-new or emptied datatable. Real projects scaffold from their own rows;
+ * these region-specific defaults keep the first row in an empty catalogue from
+ * silently changing its selected game schema.
  */
 const CHN_MUSICINFO_SHAPE: MusicInfoItem = {
   id: '', uniqueId: 0, genreNo: 0, songFileName: '', papamama: false,
@@ -111,6 +116,72 @@ const CHN_WORDLIST_SHAPE: WordListItem = {
   chineseSText: '', chineseSFontType: 0,
 };
 
+const JPN_MUSICINFO_SHAPE: MusicInfoItem = {
+  ...CHN_MUSICINFO_SHAPE,
+  spikeOnEasy: 0,
+  spikeOnNormal: 0,
+  spikeOnHard: 0,
+  spikeOnOni: 0,
+  spikeOnUra: 0,
+};
+
+const JPN_WORDLIST_SHAPE: WordListItem = {
+  key: '',
+  japaneseText: '', japaneseFontType: 0,
+  englishUsText: '', englishUsFontType: 0,
+  chineseTText: '', chineseTFontType: 0,
+  koreanText: '', koreanFontType: 0,
+};
+
+function musicInfoFallback(gameVersion: GameVersion): MusicInfoItem {
+  return gameVersion === 'jpn' ? JPN_MUSICINFO_SHAPE : CHN_MUSICINFO_SHAPE;
+}
+
+function wordlistFallback(gameVersion: GameVersion): WordListItem {
+  return gameVersion === 'jpn' ? JPN_WORDLIST_SHAPE : CHN_WORDLIST_SHAPE;
+}
+
+const MUSIC_ATTRIBUTE_COMMON_TAIL = {
+  tag1: '', tag2: '', tag3: '', tag4: '', tag5: '',
+  tag6: '', tag7: '', tag8: '', tag9: '', tag10: '',
+  ensoPartsID1: 0, ensoPartsID2: 0,
+  donBg1p: '', donBg2p: '', dancerDai: '', dancer: '',
+  danceNormalBg: '', danceFeverBg: '', rendaEffect: '', fever: '',
+  donBg1p1: '', donBg2p1: '', dancerDai1: '', dancer1: '',
+  danceNormalBg1: '', danceFeverBg1: '', rendaEffect1: '', fever1: '',
+};
+
+const COMMON_COMPANION_FALLBACKS = {
+  musicUsbSetting: { id: '', uniqueId: 0, usbVer: '' },
+  musicAiSection: {
+    id: '', uniqueId: 0,
+    easy: 0, normal: 0, hard: 0, oni: 0, ura: 0,
+    oniLevel11: '', uraLevel11: '',
+  },
+};
+
+const CHN_COMPANION_FALLBACKS = {
+  musicAttribute: {
+    id: '', uniqueId: 0, new: false, doublePlay: false, isNotCopyright: false,
+    ...MUSIC_ATTRIBUTE_COMMON_TAIL,
+  },
+  musicUsbSetting: COMMON_COMPANION_FALLBACKS.musicUsbSetting,
+  musicAiSection: COMMON_COMPANION_FALLBACKS.musicAiSection,
+} satisfies Record<CompanionTableKey, CompanionSongItem>;
+
+const JPN_COMPANION_FALLBACKS = {
+  musicAttribute: {
+    id: '', uniqueId: 0, new: false, doublePlay: false,
+    ...MUSIC_ATTRIBUTE_COMMON_TAIL,
+  },
+  musicUsbSetting: COMMON_COMPANION_FALLBACKS.musicUsbSetting,
+  musicAiSection: COMMON_COMPANION_FALLBACKS.musicAiSection,
+} satisfies Record<CompanionTableKey, CompanionSongItem>;
+
+function companionFallback(field: CompanionTableKey, gameVersion: GameVersion): CompanionSongItem {
+  return (gameVersion === 'jpn' ? JPN_COMPANION_FALLBACKS : CHN_COMPANION_FALLBACKS)[field];
+}
+
 /** Fields the Add Song dialog collects; everything else is scaffolded. */
 export interface NewSong {
   /** Explicit, immutable numeric Song No. */
@@ -130,9 +201,11 @@ export interface NewSong {
  *
  * No fumen/sound files are created — a new song starts with no chart and no
  * audio (the song list flags both); the user supplies them via the Chart/Sound
- * tabs. Returns the same reference if any required field is invalid or already taken.
+ * tabs. `gameVersion` is consulted only when a target table has no row shape
+ * to copy. Returns the same reference if any required field is invalid or
+ * already taken.
  */
-export function addSong(d: RawDatatables, song: NewSong): RawDatatables {
+export function addSong(d: RawDatatables, song: NewSong, gameVersion: GameVersion = 'chn'): RawDatatables {
   const id = song.id.trim();
   const title = song.title.trim();
   const uniqueId = song.uniqueId;
@@ -145,19 +218,21 @@ export function addSong(d: RawDatatables, song: NewSong): RawDatatables {
 
   // Copy the shape of the rows already in this file rather than writing CHN
   // literals — see model/datatableShape.ts for the divergences that forces.
+  const infoFallback = musicInfoFallback(gameVersion);
   const info = scaffoldRow<MusicInfoItem>(
     d.musicinfo.items,
     { uniqueId, id, songFileName: `sound/song_${id}`, genreNo },
-    { fallback: CHN_MUSICINFO_SHAPE, ensure: CHN_MUSICINFO_SHAPE },
+    { fallback: infoFallback, ensure: infoFallback },
   );
 
   return withCompanionRows(
     {
       ...d,
       musicinfo: { ...d.musicinfo, items: [...d.musicinfo.items, info] },
-      wordlist: { ...d.wordlist, items: [...d.wordlist.items, ...songWordlistRows(d, id, title)] },
+      wordlist: { ...d.wordlist, items: [...d.wordlist.items, ...songWordlistRows(d, id, title, gameVersion)] },
     },
     { uniqueId, id },
+    gameVersion,
   );
 }
 
@@ -170,14 +245,18 @@ export function addSong(d: RawDatatables, song: NewSong): RawDatatables {
  * of which it resolves when the chart starts. Rows are scaffolded from the
  * file's own shape, so each keeps that table's field set and types.
  */
-function withCompanionRows(d: RawDatatables, song: { uniqueId: number; id: string }): RawDatatables {
+function withCompanionRows(
+  d: RawDatatables,
+  song: { uniqueId: number; id: string },
+  gameVersion: GameVersion,
+): RawDatatables {
   let next = d;
   for (const field of COMPANION_TABLE_KEYS) {
     const table = next[field];
     if (!table) continue;
     if (table.items.some((row) => row.id === song.id || row.uniqueId === song.uniqueId)) continue;
     const row = scaffoldRow<CompanionSongItem>(table.items, song, {
-      fallback: { id: song.id, uniqueId: song.uniqueId },
+      fallback: companionFallback(field, gameVersion),
     });
     next = { ...next, [field]: { ...table, items: [...table.items, row] } };
   }
@@ -209,17 +288,23 @@ export function songWordlistKey(prefix: (typeof SONG_WORDLIST_PREFIXES)[number],
  * title whose language we do not know; it is also what all 1,254 shipped
  * `song_detail_` rows use.
  */
-function songWordlistRows(d: RawDatatables, id: string, title: string): WordListItem[] {
+function songWordlistRows(
+  d: RawDatatables,
+  id: string,
+  title: string,
+  gameVersion: GameVersion,
+): WordListItem[] {
+  const fallback = wordlistFallback(gameVersion);
   return SONG_WORDLIST_PREFIXES.map((prefix) => {
     const key = songWordlistKey(prefix, id);
     const family = (row: WordListItem) => row.key !== key && belongsToPrefix(row.key, prefix);
     const text = prefix === 'song_' ? title : '';
-    const keys = shapeKeys(d.wordlist.items, { shapeFrom: family, fallback: CHN_WORDLIST_SHAPE });
+    const keys = shapeKeys(d.wordlist.items, { shapeFrom: family, fallback });
     const seed: Partial<WordListItem> = { key };
     for (const locale of LOCALE_KEYS) if (keys.has(locale)) seed[locale] = text;
     return scaffoldRow<WordListItem>(d.wordlist.items, seed, {
       shapeFrom: family,
-      fallback: CHN_WORDLIST_SHAPE,
+      fallback,
     });
   });
 }

@@ -344,6 +344,59 @@ describe('missing companion tables', () => {
   });
 });
 
+describe('empty catalogue regional fallbacks', () => {
+  const empty = (): RawDatatables => ({
+    musicinfo: { items: [] },
+    musicOrder: { items: [] },
+    wordlist: { items: [] },
+    musicAttribute: { items: [] },
+    musicUsbSetting: { items: [] },
+    musicAiSection: { items: [] },
+  });
+
+  test('the first JPN song uses numeric flags, JPN locales, and complete companion shapes', () => {
+    const base = empty();
+    const next = addSong(base, { uniqueId: 1, id: 'first_jpn', genreNo: 0, title: 'First' }, 'jpn');
+    const info = next.musicinfo.items[0];
+    const title = next.wordlist.items.find((row) => row.key === 'song_first_jpn')!;
+
+    expect(typeof info.spikeOnEasy).toBe('number');
+    expect(info.spikeOnEasy).toBe(0);
+    expect(title).not.toHaveProperty('chineseSText');
+    expect(title).not.toHaveProperty('chineseSFontType');
+    expect(Object.keys(next.musicAttribute!.items[0])).toEqual([
+      'id', 'uniqueId', 'new', 'doublePlay',
+      'tag1', 'tag2', 'tag3', 'tag4', 'tag5', 'tag6', 'tag7', 'tag8', 'tag9', 'tag10',
+      'ensoPartsID1', 'ensoPartsID2',
+      'donBg1p', 'donBg2p', 'dancerDai', 'dancer', 'danceNormalBg', 'danceFeverBg',
+      'rendaEffect', 'fever',
+      'donBg1p1', 'donBg2p1', 'dancerDai1', 'dancer1', 'danceNormalBg1', 'danceFeverBg1',
+      'rendaEffect1', 'fever1',
+    ]);
+    expect(next.musicUsbSetting!.items[0]).toEqual({ id: 'first_jpn', uniqueId: 1, usbVer: '' });
+    expect(next.musicAiSection!.items[0]).toEqual({
+      id: 'first_jpn', uniqueId: 1,
+      easy: 0, normal: 0, hard: 0, oni: 0, ura: 0,
+      oniLevel11: '', uraLevel11: '',
+    });
+    expect(validate(next, base).issues.filter((issue) => issue.level === 'error')).toEqual([]);
+  });
+
+  test('the first CHN song keeps boolean flags and CHN-only columns', () => {
+    const next = addSong(empty(), { uniqueId: 1, id: 'first_chn', genreNo: 0, title: 'First' }, 'chn');
+    const info = next.musicinfo.items[0];
+    const title = next.wordlist.items.find((row) => row.key === 'song_first_chn')!;
+
+    expect(typeof info.spikeOnEasy).toBe('boolean');
+    expect(info.spikeOnEasy).toBe(false);
+    expect(title).toHaveProperty('chineseSText', 'First');
+    expect(title).toHaveProperty('chineseSFontType', 0);
+    expect(Object.keys(next.musicAttribute!.items[0]).slice(0, 5)).toEqual([
+      'id', 'uniqueId', 'new', 'doublePlay', 'isNotCopyright',
+    ]);
+  });
+});
+
 async function loadCorpusTable<T>(x64: string, filename: string): Promise<T> {
   const file = await readFile(resolve(x64, 'datatable', filename));
   const { payload } = await openEnvelope(

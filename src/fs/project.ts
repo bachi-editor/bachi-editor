@@ -9,7 +9,15 @@
 // Auto-descend is deliberately conservative (a few well-known sub-paths) to avoid
 // guessing.
 
-import { decodeFumen, decodeJsonPayload, isValidKeyHex, openEnvelope } from '../codec';
+import {
+  decodeFumen,
+  decodeJsonPayload,
+  detectGameVersion,
+  isValidKeyHex,
+  openEnvelope,
+  type GameVersion,
+  type MusicInfoFile,
+} from '../codec';
 
 const REQUIRED_CHILDREN = ['datatable', 'fumen', 'sound'] as const;
 
@@ -21,7 +29,8 @@ export interface ProjectKeys {
   fumen: string;
 }
 
-export interface ProjectRoot {
+/** Resolved project directories before keys and data semantics are validated. */
+export interface ProjectDirectories {
   /**
    * The folder the user picked and we remember — typically the game `Data/`
    * folder (may also be `x64/` itself or an ancestor). Used for re-grant and the
@@ -32,6 +41,14 @@ export interface ProjectRoot {
   datatable: FileSystemDirectoryHandle;
   fumen: FileSystemDirectoryHandle;
   sound: FileSystemDirectoryHandle;
+}
+
+/** A fully opened project whose game-data semantics have been selected. */
+export interface ProjectRoot extends ProjectDirectories {
+  /**
+   * Data-family semantics selected and validated when the project was opened.
+   */
+  gameVersion: GameVersion;
   /**
    * The AES keys used for this project's load/save. Optional only so focused
    * tests can construct roots for code paths that never decode game files.
@@ -83,11 +100,14 @@ async function hasAllRequiredChildren(dir: FileSystemDirectoryHandle): Promise<b
 }
 
 /**
- * Build a ProjectRoot: `handle` is the folder the user picked (what we
+ * Resolve project directories: `handle` is the folder the user picked (what we
  * remember/show), while the data directories are resolved under `x64` (the dir
  * `findX64Dir` located, which may be `handle` itself or a descendant).
  */
-async function intoProjectRoot(handle: FileSystemDirectoryHandle, x64: FileSystemDirectoryHandle): Promise<ProjectRoot> {
+async function intoProjectDirectories(
+  handle: FileSystemDirectoryHandle,
+  x64: FileSystemDirectoryHandle,
+): Promise<ProjectDirectories> {
   const [datatable, fumen, sound] = await Promise.all(
     REQUIRED_CHILDREN.map((name) => x64.getDirectoryHandle(name)),
   );
@@ -118,9 +138,11 @@ export async function requestReadWrite(handle: FileSystemDirectoryHandle): Promi
 
 /**
  * Prompt the user to pick a folder and validate it.
- * Returns an `ProjectRoot` on success, or an `ProjectOpenError` discriminator.
+ * Returns resolved directories on success, or a `ProjectOpenError` discriminator.
  */
-export async function pickProject(): Promise<{ ok: true; root: ProjectRoot } | { ok: false; error: ProjectOpenError }> {
+export async function pickProject(): Promise<
+  { ok: true; root: ProjectDirectories } | { ok: false; error: ProjectOpenError }
+> {
   type WithPicker = Window & {
     showDirectoryPicker?: (opts?: { mode?: 'read' | 'readwrite' }) => Promise<FileSystemDirectoryHandle>;
   };
@@ -143,7 +165,7 @@ export async function pickProject(): Promise<{ ok: true; root: ProjectRoot } | {
 /** Validate an existing (e.g. IDB-persisted) handle. */
 export async function validateProjectHandle(
   handle: FileSystemDirectoryHandle,
-): Promise<{ ok: true; root: ProjectRoot } | { ok: false; error: ProjectOpenError }> {
+): Promise<{ ok: true; root: ProjectDirectories } | { ok: false; error: ProjectOpenError }> {
   const x64 = await findX64Dir(handle);
   if (!x64) {
     return {
@@ -157,7 +179,7 @@ export async function validateProjectHandle(
       },
     };
   }
-  return { ok: true, root: await intoProjectRoot(handle, x64) };
+  return { ok: true, root: await intoProjectDirectories(handle, x64) };
 }
 
 // ── Multi-step open flow (pick folder → paste keys → validate + open) ─────────
@@ -174,6 +196,7 @@ export type OpenValidationError =
   | { field: 'folder' }
   | { field: 'datatable'; reason: 'format' | 'decrypt' }
   | { field: 'fumen'; reason: 'format' | 'decrypt' }
+  | { field: 'gameVersion'; selected: GameVersion; detected: GameVersion }
   | { field: 'generic'; message: string };
 
 /** Show the OS folder picker (step 1). Does not validate — that happens on open. */
@@ -205,14 +228,18 @@ async function readBinBytes(dir: FileSystemDirectoryHandle, name: string): Promi
   return new Uint8Array(await file.arrayBuffer());
 }
 
-/** True if `keyHex` decrypts musicinfo.bin into valid datatable JSON. */
-async function datatableKeyDecrypts(datatable: FileSystemDirectoryHandle, keyHex: string): Promise<boolean> {
+/** Decrypt musicinfo once for both key validation and game-version detection. */
+async function decodeMusicInfo(
+  datatable: FileSystemDirectoryHandle,
+  keyHex: string,
+): Promise<MusicInfoFile | undefined> {
   try {
     const { payload } = await openEnvelope(await readBinBytes(datatable, 'musicinfo.bin'), keyHex);
-    decodeJsonPayload(payload); // throws on a bad key → garbage that won't gunzip/parse
-    return true;
+    const musicinfo = decodeJsonPayload<MusicInfoFile>(payload);
+    if (!Array.isArray(musicinfo?.items)) return undefined;
+    return musicinfo;
   } catch {
-    return false;
+    return undefined;
   }
 }
 
@@ -257,6 +284,7 @@ async function fumenKeyDecrypts(fumen: FileSystemDirectoryHandle, keyHex: string
 export async function openProjectWithKeys(
   handle: FileSystemDirectoryHandle,
   keys: ProjectKeys,
+  gameVersion: GameVersion,
 ): Promise<{ ok: true; root: ProjectRoot } | { ok: false; error: OpenValidationError }> {
   const x64 = await findX64Dir(handle);
   if (!x64) return { ok: false, error: { field: 'folder' } };
@@ -267,9 +295,21 @@ export async function openProjectWithKeys(
   if (!isValidKeyHex(fumenKey)) return { ok: false, error: { field: 'fumen', reason: 'format' } };
 
   try {
-    const root: ProjectRoot = { ...(await intoProjectRoot(handle, x64)), keys: { datatable: datatableKey, fumen: fumenKey } };
-    if (!(await datatableKeyDecrypts(root.datatable, datatableKey))) {
+    const root: ProjectRoot = {
+      ...(await intoProjectDirectories(handle, x64)),
+      keys: { datatable: datatableKey, fumen: fumenKey },
+      gameVersion,
+    };
+    const musicinfo = await decodeMusicInfo(root.datatable, datatableKey);
+    if (!musicinfo) {
       return { ok: false, error: { field: 'datatable', reason: 'decrypt' } };
+    }
+    const detected = detectGameVersion(musicinfo);
+    if (detected && detected !== gameVersion) {
+      return {
+        ok: false,
+        error: { field: 'gameVersion', selected: gameVersion, detected },
+      };
     }
     if ((await fumenKeyDecrypts(root.fumen, fumenKey)) === false) {
       return { ok: false, error: { field: 'fumen', reason: 'decrypt' } };

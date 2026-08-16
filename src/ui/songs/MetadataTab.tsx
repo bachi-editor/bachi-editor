@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../model/store';
-import { LOCALES, type Locale, type SongRow } from '../../model/songlist';
+import { localesForGameVersion, type Locale, type SongRow } from '../../model/songlist';
 import type { FumenDifficulty } from '../../fs/fumens';
 import { genreMessageKey } from '../../model/genres';
 import type {
@@ -308,6 +308,8 @@ export function MetadataTab({ row }: { row: SongRow }) {
   const project = useAppStore((s) => s.project);
 
   const baseline: RawDatatables | undefined = project.kind === 'open' ? project.project.baseline : undefined;
+  const gameVersion = project.kind === 'open' ? project.project.root.gameVersion : undefined;
+  const metadataLocales = localesForGameVersion(gameVersion);
   const baseInfo = useMemo(
     () => baseline?.musicinfo.items.find((item) => item.uniqueId === row.uniqueId),
     [baseline, row.uniqueId],
@@ -501,7 +503,7 @@ export function MetadataTab({ row }: { row: SongRow }) {
               <span style={{ flex: 1 }}>{t('metadata.title')}</span>
               <span style={{ flex: 1 }}>{t('metadata.subtitle')}</span>
             </div>
-            {LOCALES.map((locale) => {
+            {metadataLocales.map((locale) => {
               const titleDirty = row.titles.title[locale.value] !== baseTitle(locale.value);
               const subtitleDirty = row.titles.subtitle[locale.value] !== baseSubtitle(locale.value);
               return (

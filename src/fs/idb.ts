@@ -5,6 +5,8 @@
 // One database and one small object store are enough for the project/Dani
 // handles plus the optional user-supplied G.719 codec modules.
 
+import { isGameVersion, type GameVersion } from '../codec/datatable/gameVersion';
+
 const DB_NAME = 'taiko-editor';
 const DB_VERSION = 1;
 const STORE = 'handles';
@@ -41,15 +43,42 @@ async function tx<T>(mode: IDBTransactionMode, run: (s: IDBObjectStore) => IDBRe
   }
 }
 
-export async function saveProjectRootHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-  await tx('readwrite', (s) => s.put(handle, ROOT_KEY));
+export interface ProjectRootRecord {
+  handle: FileSystemDirectoryHandle;
+  gameVersion?: GameVersion;
 }
 
+function isDirectoryHandle(value: unknown): value is FileSystemDirectoryHandle {
+  return typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === 'directory';
+}
+
+export async function saveProjectRootHandle(
+  handle: FileSystemDirectoryHandle,
+  gameVersion: GameVersion,
+): Promise<void> {
+  // One structured-clone write keeps the handle and its interpretation atomic.
+  const value: ProjectRootRecord = { handle, gameVersion };
+  await tx('readwrite', (s) => s.put(value, ROOT_KEY));
+}
+
+/** Load the current wrapper, while upgrading legacy raw-handle values in memory. */
+export async function loadProjectRootRecord(): Promise<ProjectRootRecord | undefined> {
+  const value = await tx<unknown>('readonly', (s) => s.get(ROOT_KEY));
+  if (isDirectoryHandle(value)) return { handle: value };
+  if (typeof value !== 'object' || value === null) return undefined;
+
+  const candidate = value as { handle?: unknown; gameVersion?: unknown };
+  if (!isDirectoryHandle(candidate.handle)) return undefined;
+  if (candidate.gameVersion === undefined) return { handle: candidate.handle };
+  // Preserve the remembered folder if a future/invalid version value appears;
+  // callers can ask the user to select its interpretation again.
+  if (!isGameVersion(candidate.gameVersion)) return { handle: candidate.handle };
+  return { handle: candidate.handle, gameVersion: candidate.gameVersion };
+}
+
+/** Legacy projection retained for callers that only need the remembered folder. */
 export async function loadProjectRootHandle(): Promise<FileSystemDirectoryHandle | undefined> {
-  const value = await tx<FileSystemDirectoryHandle | undefined>('readonly', (s) =>
-    s.get(ROOT_KEY) as IDBRequest<FileSystemDirectoryHandle | undefined>,
-  );
-  return value ?? undefined;
+  return (await loadProjectRootRecord())?.handle;
 }
 
 export async function clearProjectRootHandle(): Promise<void> {

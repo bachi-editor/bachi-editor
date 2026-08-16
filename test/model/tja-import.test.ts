@@ -157,6 +157,26 @@ describe('TJA import conversion', () => {
     });
   });
 
+  test('JPN metadata import leaves Simplified Chinese untouched while applying supported locales', () => {
+    const imported = convertTjaForImport(TJA);
+    const seeded = datatables();
+    const title = seeded.wordlist.items.find((item) => item.key === 'song_target')!;
+    const subtitle = seeded.wordlist.items.find((item) => item.key === 'song_sub_target')!;
+    title.chineseSText = 'keep JPN title sentinel';
+    subtitle.chineseSText = 'keep JPN subtitle sentinel';
+
+    const next = applyTjaImportMetadata(seeded, 17, 'target', imported, 'jpn');
+    expect(next.wordlist.items.find((item) => item.key === 'song_target')).toMatchObject({
+      japaneseText: '日本語タイトル',
+      chineseTText: '中文標題',
+      chineseSText: 'keep JPN title sentinel',
+    });
+    expect(next.wordlist.items.find((item) => item.key === 'song_sub_target')).toMatchObject({
+      japaneseText: '日本語サブ',
+      chineseSText: 'keep JPN subtitle sentinel',
+    });
+  });
+
   test('splits two-valued SCOREINIT into the fumen base and the Shin-uchi score', () => {
     const imported = convertTjaForImport(`
 TITLE:Two-valued

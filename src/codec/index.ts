@@ -11,6 +11,7 @@ export {
   MINIFIED_JSON_STYLE,
   type JsonTextStyle,
 } from './datatable/serde';
+export { detectGameVersion, isGameVersion, type GameVersion } from './datatable/gameVersion';
 export * from './datatable/types';
 export * from './serverdata';
 export * from './fumen/types';

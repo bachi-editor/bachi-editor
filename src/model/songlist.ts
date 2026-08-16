@@ -9,7 +9,7 @@
 //   song_sub_<id>     → subtitle
 //   song_detail_<id>  → long description / "song wedge text"
 
-import type { MusicInfoItem, MusicOrderItem, WordListItem } from '../codec';
+import type { GameVersion, MusicInfoItem, MusicOrderItem, WordListItem } from '../codec';
 import type { RawDatatables } from '../fs/datatables';
 import type { AssetInventory } from '../fs/inventory';
 import { resolveSoundFile } from '../fs/sound';
@@ -24,6 +24,13 @@ export const LOCALES: { value: Locale; label: string }[] = [
   { value: 'englishUsText', label: 'English' },
   { value: 'koreanText', label: '한국어' },
 ];
+
+const JPN_LOCALES = LOCALES.filter((locale) => locale.value !== 'chineseSText');
+
+/** Localized fields offered and written for a selected game-data schema. */
+export function localesForGameVersion(gameVersion?: GameVersion): readonly (typeof LOCALES)[number][] {
+  return gameVersion === 'jpn' ? JPN_LOCALES : LOCALES;
+}
 
 export interface Titles {
   title: Record<Locale, string>;

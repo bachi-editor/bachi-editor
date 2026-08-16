@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
-import { validateG719EncoderWasm, validateG719Wasm } from '../codec';
+import { type GameVersion, validateG719EncoderWasm, validateG719Wasm } from '../codec';
 import {
   clearG719EncoderWasm,
   clearG719DecoderWasm,
@@ -12,7 +12,7 @@ import {
 } from '../fs/idb';
 import type { OpenValidationError } from '../fs/project';
 import { type TFn, useT } from '../i18n';
-import { useAppStore } from '../model/store';
+import { type ProjectSetup, useAppStore } from '../model/store';
 import { soundbankPlayer } from '../audio';
 import { Icon } from './shell/Icon';
 
@@ -30,10 +30,72 @@ type EncoderState =
   | { kind: 'invalid'; record: StoredG719EncoderWasm }
   | { kind: 'error' };
 
-function setupErrorMessage(t: TFn, err: OpenValidationError): string {
+function gameVersionLabel(t: TFn, version: GameVersion): string {
+  return t(version === 'chn' ? 'setup.gameVersion.chn' : 'setup.gameVersion.jpn');
+}
+
+export function GameVersionField({
+  value,
+  invalid,
+  disabled,
+  errorId,
+  onChange,
+  t,
+}: {
+  value?: GameVersion;
+  invalid: boolean;
+  disabled: boolean;
+  errorId?: string;
+  onChange: (version: GameVersion) => void;
+  t: TFn;
+}) {
+  const describedBy = `tk-game-version-hint${errorId ? ` ${errorId}` : ''}`;
+  return (
+    <fieldset
+      className="tk-settings-version"
+      disabled={disabled}
+      aria-invalid={invalid}
+      aria-describedby={describedBy}
+      aria-errormessage={invalid ? errorId : undefined}
+    >
+      <legend>{t('setup.gameVersion.title')}</legend>
+      <p id="tk-game-version-hint" className="tk-settings-version-hint">
+        {t('setup.gameVersion.hint')}
+      </p>
+      <div className="tk-settings-version-options">
+        {(['chn', 'jpn'] as const).map((version) => (
+          <label
+            className={'tk-settings-version-option' + (value === version ? ' selected' : '')}
+            key={version}
+          >
+            <input
+              type="radio"
+              name="game-version"
+              value={version}
+              checked={value === version}
+              required
+              aria-invalid={invalid}
+              aria-describedby={describedBy}
+              aria-errormessage={invalid ? errorId : undefined}
+              onChange={() => onChange(version)}
+            />
+            <span>{gameVersionLabel(t, version)}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+export function setupErrorMessage(t: TFn, err: OpenValidationError): string {
   switch (err.field) {
     case 'folder':
       return t('setup.error.folder');
+    case 'gameVersion':
+      return t('setup.error.gameVersionMismatch', {
+        selected: gameVersionLabel(t, err.selected),
+        detected: gameVersionLabel(t, err.detected),
+      });
     case 'datatable':
       return err.reason === 'format' ? t('setup.error.datatableKeyFormat') : t('setup.error.datatableKey');
     case 'fumen':
@@ -41,6 +103,16 @@ function setupErrorMessage(t: TFn, err: OpenValidationError): string {
     case 'generic':
       return err.message || t('setup.error.generic');
   }
+}
+
+export function canOpenProjectSetup(
+  setup: Pick<ProjectSetup, 'handle' | 'gameVersion' | 'datatableKey' | 'fumenKey' | 'busy'>,
+): boolean {
+  return !!setup.handle
+    && (setup.gameVersion === 'chn' || setup.gameVersion === 'jpn')
+    && setup.datatableKey.trim() !== ''
+    && setup.fumenKey.trim() !== ''
+    && !setup.busy;
 }
 
 function formatBytes(bytes: number): string {
@@ -53,6 +125,7 @@ export function SettingsDialog() {
   const setup = useAppStore((s) => s.setup);
   const close = useAppStore((s) => s.closeSettings);
   const pickFolder = useAppStore((s) => s.setupPickFolder);
+  const setGameVersion = useAppStore((s) => s.setupSetGameVersion);
   const setKey = useAppStore((s) => s.setupSetKey);
   const openProject = useAppStore((s) => s.setupOpenProject);
   // The export bundle is launched from the overflow menu, not from here, but its
@@ -227,13 +300,10 @@ export function SettingsDialog() {
   const selectedFolder =
     setup.folderName
     ?? (project.kind === 'open' ? project.project.root.handle.name : undefined);
-  const hasFolder = !!setup.handle;
-  const canOpen =
-    hasFolder
-    && setup.datatableKey.trim() !== ''
-    && setup.fumenKey.trim() !== ''
-    && !setup.busy;
+  const canOpen = canOpenProjectSetup(setup);
   const errField = setup.error?.field;
+  const versionInvalid = errField === 'gameVersion';
+  const setupErrorId = setup.error ? 'tk-setup-error' : undefined;
   const decoderRecord = decoder.kind === 'ready' || decoder.kind === 'invalid' ? decoder.record : undefined;
   const encoderRecord = encoder.kind === 'ready' || encoder.kind === 'invalid' ? encoder.record : undefined;
   const codecBusy = decoderBusy || encoderBusy;
@@ -299,6 +369,15 @@ export function SettingsDialog() {
                   )}
                 </div>
 
+                <GameVersionField
+                  value={setup.gameVersion}
+                  invalid={versionInvalid}
+                  disabled={setup.busy}
+                  errorId={versionInvalid ? 'tk-setup-error' : undefined}
+                  onChange={setGameVersion}
+                  t={t}
+                />
+
                 <div className="tk-row2">
                   <div className="tk-field">
                     <label>{t('setup.step2.datatableKey')}</label>
@@ -311,6 +390,7 @@ export function SettingsDialog() {
                       placeholder={t('setup.step2.placeholder')}
                       value={setup.datatableKey}
                       aria-invalid={errField === 'datatable'}
+                      aria-errormessage={errField === 'datatable' ? setupErrorId : undefined}
                       onChange={(event) => setKey('datatable', event.currentTarget.value)}
                       disabled={setup.busy}
                     />
@@ -326,6 +406,7 @@ export function SettingsDialog() {
                       placeholder={t('setup.step2.placeholder')}
                       value={setup.fumenKey}
                       aria-invalid={errField === 'fumen'}
+                      aria-errormessage={errField === 'fumen' ? setupErrorId : undefined}
                       onChange={(event) => setKey('fumen', event.currentTarget.value)}
                       disabled={setup.busy}
                     />
@@ -334,7 +415,7 @@ export function SettingsDialog() {
 
                 {project.kind === 'error' && <div className="tk-modal-note err">{project.message}</div>}
                 {setup.error && (
-                  <div className="tk-error-banner tk-setup-error" role="alert">
+                  <div id="tk-setup-error" className="tk-error-banner tk-setup-error" role="alert">
                     <h3><Icon name="alert" size={14} /> {t('setup.error.title')}</h3>
                     <p>{setupErrorMessage(t, setup.error)}</p>
                     <p className="tk-setup-error-hint">{t('setup.error.checkHint')}</p>

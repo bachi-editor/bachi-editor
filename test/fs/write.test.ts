@@ -141,6 +141,7 @@ async function seedRoot(base: RawDatatables): Promise<{ root: ProjectRoot; datat
     fumen: fumen as unknown as FileSystemDirectoryHandle,
     sound: sound as unknown as FileSystemDirectoryHandle,
     keys: KEYS,
+    gameVersion: 'chn' as const,
   };
   return { root, datatable, fumen, sound };
 }

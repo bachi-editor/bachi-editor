@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import type { FumenDifficulty, FumenPlayer, FumenSlot } from '../fs/fumens';
-import { readNus3BankDemoStartMs } from '../codec';
+import { readNus3BankDemoStartMs, type GameVersion } from '../codec';
 import { readSoundBankBytes, resolveSoundFile } from '../fs/sound';
 import { useAppStore } from '../model/store';
-import { hasAudioFile, LOCALES, songStars, type SongRow } from '../model/songlist';
+import { hasAudioFile, localesForGameVersion, songStars, type SongRow } from '../model/songlist';
 import { formatSeconds, soundMetadataKey } from '../model/soundMetadata';
 import { CHART_METADATA_FIELDS, summarizeFumenMetadata } from '../model/fumenMetadata';
 import {
@@ -114,9 +114,14 @@ function shinutiLabel(field: ShinutiField): MessageKey {
   return field.endsWith('Duet') ? 'metadata.baseScoreDuet' : 'metadata.baseScore';
 }
 
-function metadataChanges(row: SongRow, imported: TjaImportResult, t: ReturnType<typeof useT>): MetadataChange[] {
+export function metadataChanges(
+  row: SongRow,
+  imported: TjaImportResult,
+  t: ReturnType<typeof useT>,
+  gameVersion?: GameVersion,
+): MetadataChange[] {
   const changes: MetadataChange[] = [];
-  for (const locale of LOCALES) {
+  for (const locale of localesForGameVersion(gameVersion)) {
     const title = imported.title[locale.value];
     if (row.titles.title[locale.value] !== title) {
       changes.push({
@@ -287,6 +292,7 @@ export function ImportTjaDialog() {
 
   const open = project.kind === 'open' ? project.project : undefined;
   const row = open && songId ? open.songs.byId.get(songId) : undefined;
+  const gameVersion = open?.root.gameVersion;
 
   const tjaDemoStartMs = selected?.imported.demoStartMs;
   const audioOnDisk = !!open && !!row && hasAudioFile(open.assets, row);
@@ -386,7 +392,7 @@ export function ImportTjaDialog() {
     }
   };
 
-  const changes = selected ? metadataChanges(row, selected.imported, t) : [];
+  const changes = selected ? metadataChanges(row, selected.imported, t, gameVersion) : [];
   const currentNames = new Set(songSlots.map((slot) => slot.filename));
   const importedNames = new Set(selected?.imported.charts.map((chart) => importChartSlot(songId, chart).filename) ?? []);
   const removed = selected ? songSlots.filter((slot) => !importedNames.has(slot.filename)) : [];
