@@ -1112,6 +1112,40 @@ export const messages = {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
   },
+  'about.release.0_0_5.title': {
+    en: 'Regional data and server exports', ja: '地域別データとサーバーエクスポート',
+    'zh-Hans': '地区数据与服务器导出', 'zh-Hant': '地區資料與伺服器匯出',
+  },
+  'about.release.0_0_5.serverBundle': {
+    en: 'Server bundle export is back with independent choices for music metadata, music order, Dani Dojo, and Gaiden, plus official .bin or readable .json output in the correct server folder layout.',
+    ja: 'サーバーバンドルのエクスポートを復活させ、楽曲メタデータ・曲順・段位道場・外伝を個別に選び、正しいサーバーフォルダー構成で公式 .bin または可読 .json を出力できるようにしました。',
+    'zh-Hans': '恢复了服务器捆绑包导出，可分别选择乐曲元数据、乐曲顺序、段位道场和外传，并按正确的服务器文件夹结构输出官方 .bin 或可读 .json。',
+    'zh-Hant': '恢復了伺服器套件匯出，可分別選擇樂曲中繼資料、樂曲順序、段位道場和外傳，並依正確的伺服器資料夾結構輸出官方 .bin 或可讀 .json。',
+  },
+  'about.release.0_0_5.gameVersion': {
+    en: 'Opening a project now requires selecting CHN or JPN, remembers that choice, and warns when the selected version does not match the datatables.',
+    ja: 'プロジェクトを開く際に CHN 版または JPN 版の選択が必須になりました。選択は記憶され、データテーブルと一致しない場合は警告します。',
+    'zh-Hans': '打开项目时现在必须选择 CHN 版或 JPN 版；该选择会被记住，并会在所选版本与数据表不匹配时发出警告。',
+    'zh-Hant': '開啟專案時現在必須選擇 CHN 版或 JPN 版；該選擇會被記住，並會在所選版本與資料表不相符時發出警告。',
+  },
+  'about.release.0_0_5.regionalData': {
+    en: 'New songs and metadata edits now follow the stored regional datatable shape and field types, preserving JPN integers, CHN booleans, and each version’s wordlist columns.',
+    ja: '新規楽曲とメタデータ編集が、保存済みの地域別データテーブルの形状とフィールド型に従うようになりました。JPN 版の整数、CHN 版の真偽値、各版のワードリスト列を保持します。',
+    'zh-Hans': '新增歌曲和元数据编辑现在会遵循已存储的地区数据表结构和字段类型，保留 JPN 版的整数、CHN 版的布尔值以及各版本的词条表列。',
+    'zh-Hant': '新增歌曲和中繼資料編輯現在會遵循已儲存的地區資料表結構和欄位型別，保留 JPN 版的整數、CHN 版的布林值以及各版本的詞條表欄位。',
+  },
+  'about.release.0_0_5.companionTables': {
+    en: 'Adding and deleting songs now keeps music_attribute, music_usbsetting, and music_ai_section in sync, and saving is blocked if required companion rows are missing.',
+    ja: '楽曲の追加・削除時に music_attribute・music_usbsetting・music_ai_section も同期し、必要な補助行が欠けている場合は保存を停止するようにしました。',
+    'zh-Hans': '添加和删除歌曲时现在会同步 music_attribute、music_usbsetting 和 music_ai_section；缺少必要的配套行时将阻止保存。',
+    'zh-Hant': '新增和刪除歌曲時現在會同步 music_attribute、music_usbsetting 和 music_ai_section；缺少必要的配套資料列時將阻止儲存。',
+  },
+  'about.release.0_0_5.soundBanks': {
+    en: 'New and re-encoded NUS3BANK files now write counted NUL-terminated names and allocated bank IDs, fixing output whose songs had no preview and would not start.',
+    ja: '新規作成または再エンコードした NUS3BANK に、NUL 終端文字を長さに含めた名前と割り当て済みバンク ID を書き込むようにし、試聴できず開始もしなかった出力を修正しました。',
+    'zh-Hans': '新建和重新编码的 NUS3BANK 现在会写入长度中包含 NUL 终止符的名称以及分配的音频库 ID，修复了歌曲无法试听且无法开始的输出。',
+    'zh-Hant': '新建和重新編碼的 NUS3BANK 現在會寫入長度中包含 NUL 終止符的名稱以及分配的音訊庫 ID，修正了歌曲無法試聽且無法開始的輸出。',
+  },
   'about.release.0_0_4.title': {
     en: 'TJA import options', ja: 'TJAインポートの選択',
     'zh-Hans': 'TJA 导入选项', 'zh-Hant': 'TJA 匯入選項',

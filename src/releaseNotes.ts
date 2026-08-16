@@ -16,6 +16,18 @@ export interface ReleaseNote {
 
 export const RELEASE_NOTES = [
   {
+    version: '0.0.5',
+    date: '2026-08-15',
+    titleKey: 'about.release.0_0_5.title',
+    changeKeys: [
+      'about.release.0_0_5.serverBundle',
+      'about.release.0_0_5.gameVersion',
+      'about.release.0_0_5.regionalData',
+      'about.release.0_0_5.companionTables',
+      'about.release.0_0_5.soundBanks',
+    ],
+  },
+  {
     version: '0.0.4',
     date: '2026-08-12',
     titleKey: 'about.release.0_0_4.title',
