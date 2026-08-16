@@ -9,6 +9,7 @@ export interface EncodeWorkerRequest {
   preferredStem: string;
   songId: string;
   uniqueId: number;
+  bankId?: number;
   demoStartMs: number;
 }
 

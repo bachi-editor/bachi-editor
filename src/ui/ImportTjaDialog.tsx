@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { MessageKey } from '../i18n';
 import { useT } from '../i18n';
 import type { FumenDifficulty, FumenPlayer, FumenSlot } from '../fs/fumens';
-import { readNus3BankDemoStartMs } from '../codec';
+import { readNus3BankDemoStartMs, type GameVersion } from '../codec';
 import { readSoundBankBytes, resolveSoundFile } from '../fs/sound';
 import { useAppStore } from '../model/store';
-import { hasAudioFile, LOCALES, songStars, type SongRow } from '../model/songlist';
+import { hasAudioFile, localesForGameVersion, songStars, type SongRow } from '../model/songlist';
 import { formatSeconds, soundMetadataKey } from '../model/soundMetadata';
 import { CHART_METADATA_FIELDS, summarizeFumenMetadata } from '../model/fumenMetadata';
 import {
@@ -24,6 +24,7 @@ import {
   type TjaImportWarningCode,
 } from '../model/tjaImport';
 import { Icon } from './shell/Icon';
+import { PartHeader } from './shell/PartHeader';
 
 // The parts the user last chose to import. Remembered (best-effort localStorage)
 // so a repeated workflow — charts only, say — survives reopening the dialog and
@@ -113,9 +114,14 @@ function shinutiLabel(field: ShinutiField): MessageKey {
   return field.endsWith('Duet') ? 'metadata.baseScoreDuet' : 'metadata.baseScore';
 }
 
-function metadataChanges(row: SongRow, imported: TjaImportResult, t: ReturnType<typeof useT>): MetadataChange[] {
+export function metadataChanges(
+  row: SongRow,
+  imported: TjaImportResult,
+  t: ReturnType<typeof useT>,
+  gameVersion?: GameVersion,
+): MetadataChange[] {
   const changes: MetadataChange[] = [];
-  for (const locale of LOCALES) {
+  for (const locale of localesForGameVersion(gameVersion)) {
     const title = imported.title[locale.value];
     if (row.titles.title[locale.value] !== title) {
       changes.push({
@@ -251,42 +257,6 @@ function ChartPreviewRow({
   );
 }
 
-/**
- * A preview group's header, doubling as the switch for that part of the import.
- * A part that cannot be applied at all — a demo start with no bank to write it
- * into — is disabled and reads as unchecked without forgetting the preference.
- */
-function PartHeader({
-  label,
-  checked,
-  onChange,
-  available = true,
-  locked = false,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-  /** False when this part cannot be applied at all — reads as unchecked. */
-  available?: boolean;
-  /** True only while the import runs: no toggling, but the choice still shows. */
-  locked?: boolean;
-}) {
-  const t = useT();
-  const on = checked && available;
-  return (
-    <label className={`tk-modal-grouphd tk-import-parthd tk-check${available ? '' : ' is-disabled'}`}>
-      <input
-        type="checkbox"
-        checked={on}
-        disabled={locked || !available}
-        onChange={(event) => onChange(event.currentTarget.checked)}
-      />
-      <span>{label}</span>
-      {!on && <span className="tk-import-skiptag">{t('importtja.skipped')}</span>}
-    </label>
-  );
-}
-
 function RemovedChartRow({ songId, slot }: { songId: string; slot: FumenSlot }) {
   const t = useT();
   return (
@@ -322,6 +292,7 @@ export function ImportTjaDialog() {
 
   const open = project.kind === 'open' ? project.project : undefined;
   const row = open && songId ? open.songs.byId.get(songId) : undefined;
+  const gameVersion = open?.root.gameVersion;
 
   const tjaDemoStartMs = selected?.imported.demoStartMs;
   const audioOnDisk = !!open && !!row && hasAudioFile(open.assets, row);
@@ -421,7 +392,7 @@ export function ImportTjaDialog() {
     }
   };
 
-  const changes = selected ? metadataChanges(row, selected.imported, t) : [];
+  const changes = selected ? metadataChanges(row, selected.imported, t, gameVersion) : [];
   const currentNames = new Set(songSlots.map((slot) => slot.filename));
   const importedNames = new Set(selected?.imported.charts.map((chart) => importChartSlot(songId, chart).filename) ?? []);
   const removed = selected ? songSlots.filter((slot) => !importedNames.has(slot.filename)) : [];
@@ -480,7 +451,7 @@ export function ImportTjaDialog() {
                 onChange={(value) => setPart('metadata', value)}
                 locked={importing}
               />
-              <div className={options.metadata ? undefined : 'tk-import-skipped'}>
+              <div className={options.metadata ? undefined : 'tk-skipped'}>
                 {changes.length === 0 ? (
                   <div className="tk-modal-empty">{t('importtja.noMetadataChanges')}</div>
                 ) : changes.map((change) => (
@@ -505,7 +476,7 @@ export function ImportTjaDialog() {
                 onChange={(value) => setPart('charts', value)}
                 locked={importing}
               />
-              <div className={options.charts ? undefined : 'tk-import-skipped'}>
+              <div className={options.charts ? undefined : 'tk-skipped'}>
                 {selected.imported.charts.map((chart) => (
                   <ChartPreviewRow
                     key={`${chart.slot.difficulty}:${chart.slot.player}`}
@@ -526,7 +497,7 @@ export function ImportTjaDialog() {
                 available={demoStartApplicable}
                 locked={importing}
               />
-              <div className={applyDemoStart ? undefined : 'tk-import-skipped'}>
+              <div className={applyDemoStart ? undefined : 'tk-skipped'}>
                 {demoProbe.kind === 'ready' && tjaDemoStartMs !== undefined ? (
                   <div className="tk-save-row">
                     <span className="tk-save-badge edit">~</span>
@@ -549,7 +520,7 @@ export function ImportTjaDialog() {
                 )}
               </div>
               {demoStartIssue && (
-                <div className="tk-save-issue warn tk-import-issue">
+                <div className="tk-save-issue warn tk-issue-row">
                   <Icon name="alert" size={14} /> {t(demoStartIssue)}
                 </div>
               )}

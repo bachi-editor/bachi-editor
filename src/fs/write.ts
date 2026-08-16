@@ -28,6 +28,9 @@ const FILE_KEYS: Record<DatatableName, keyof RawDatatables> = {
   'musicinfo.bin': 'musicinfo',
   'music_order.bin': 'musicOrder',
   'wordlist.bin': 'wordlist',
+  'music_attribute.bin': 'musicAttribute',
+  'music_usbsetting.bin': 'musicUsbSetting',
+  'music_ai_section.bin': 'musicAiSection',
 };
 
 /** Encode a datatable object to its on-disk bytes (JSON → gzip → AES). */
@@ -44,8 +47,11 @@ export async function sealDatatable(
  * than remembered from load, so the style matches whatever is actually there.
  * A file we cannot read back falls through to compact JSON — a formatting
  * preference must never be the thing that blocks a save.
+ *
+ * Exported because the server bundle seals the same objects (see fs/exportBundle)
+ * and must produce the same bytes a save would.
  */
-async function styleOnDisk(root: ProjectRoot, name: DatatableName, keyHex: string): Promise<JsonTextStyle> {
+export async function datatableStyleOnDisk(root: ProjectRoot, name: DatatableName, keyHex: string): Promise<JsonTextStyle> {
   try {
     const bytes = await readBytes(root.datatable, name);
     if (!bytes) return MINIFIED_JSON_STYLE;
@@ -304,8 +310,11 @@ export async function saveDatatables(
     if (!fd.dirty) continue;
     const name = fd.file;
     const obj = draft[FILE_KEYS[name]];
+    // A companion table the project does not have is never dirty, but never
+    // write `undefined` over a real file if that ever changes.
+    if (!obj) continue;
     const key = datatableKeyOf(root);
-    const newBytes = await sealDatatable(obj, key, await styleOnDisk(root, name, key));
+    const newBytes = await sealDatatable(obj, key, await datatableStyleOnDisk(root, name, key));
     const original = await readBytes(root.datatable, name);
 
     await writeBytes(root.datatable, name, newBytes);

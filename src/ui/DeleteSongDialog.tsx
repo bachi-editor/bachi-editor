@@ -1,4 +1,4 @@
-// Delete Song confirmation. Removing a song drops it from all three datatables
+// Delete Song confirmation. Removing a song drops it from all six datatables
 // immediately (undoable); its on-disk fumen folder + sound file are removed
 // when the project is next saved.
 

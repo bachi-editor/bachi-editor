@@ -1,7 +1,7 @@
 // Sound-bank file management for the Sound tab. Replacements and removals touch
 // only the per-song production file under sound/.
 
-import type { MusicInfoItem } from '../codec';
+import { readNus3BankId, type MusicInfoItem } from '../codec';
 import type { ProjectRoot } from './project';
 
 export interface ResolvedSoundFile {
@@ -76,6 +76,59 @@ async function readFile(dir: FileSystemDirectoryHandle, name: string): Promise<F
   } catch {
     return undefined;
   }
+}
+
+async function readBankIdPrefix(
+  dir: FileSystemDirectoryHandle,
+  name: string,
+): Promise<number | undefined> {
+  try {
+    const fh = await dir.getFileHandle(name);
+    const file = await fh.getFile();
+    const prefix = new Uint8Array(await file.slice(0, 4096).arrayBuffer());
+    return readNus3BankId(prefix);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Pick an unused id after the highest bank id the project currently stores. */
+export function nextAvailableNus3BankId(ids: Iterable<number>, fallback: number): number {
+  const used = new Set(
+    [...ids].filter((id) => Number.isInteger(id) && id >= 0 && id <= 0xffff_ffff),
+  );
+  if (used.size === 0) return fallback;
+  const highest = Math.max(...used);
+  if (highest < 0xffff_ffff) return highest + 1;
+  let candidate = 0;
+  for (const id of [...used].sort((a, b) => a - b)) {
+    if (id < candidate) continue;
+    if (id > candidate) return candidate;
+    candidate += 1;
+  }
+  if (candidate <= 0xffff_ffff) return candidate;
+  throw new Error('The project has no unused nus3bank id.');
+}
+
+/**
+ * Read only the small BINF-bearing prefix of each sound bank, in bounded
+ * batches, and allocate a collision-free id for a newly created bank.
+ */
+export async function allocateNus3BankId(
+  root: ProjectRoot,
+  filenames: Iterable<string>,
+  fallback: number,
+): Promise<number> {
+  const names = [...filenames].filter((name) => name.toLowerCase().endsWith('.nus3bank'));
+  const ids: number[] = [];
+  const batchSize = 32;
+  for (let start = 0; start < names.length; start += batchSize) {
+    const batch = await Promise.all(
+      names.slice(start, start + batchSize).map((name) => readBankIdPrefix(root.sound, name)),
+    );
+    for (const id of batch) if (id !== undefined) ids.push(id);
+  }
+  return nextAvailableNus3BankId(ids, fallback);
 }
 
 async function writeBytes(dir: FileSystemDirectoryHandle, name: string, bytes: Uint8Array): Promise<void> {

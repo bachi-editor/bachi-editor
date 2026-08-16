@@ -1,22 +1,43 @@
-// Build the TaikoLocalServer datatable bundle. The zip is meant to be unpacked
-// into TaikoLocalServer/Host/wwwroot/data/datatable/ after saving game files.
+// Build the TaikoLocalServer data bundle.
+//
+// The zip mirrors TaikoLocalServer/Host/wwwroot/data/, so unpacking it there
+// puts every file where the server already looks: the game datatables under
+// `datatable/`, the Dani Dojo configs at the root beside it. What goes in is the
+// user's choice (see ui/ExportDialog) — any non-empty subset of the four
+// server-facing data sets, each of which the editor may or may not have data for.
+//
+// The two formats are alternatives, not halves of one export: the server reads a
+// datatable's `.json` sibling in preference to its `.bin`, so either alone is
+// complete. `bin` is what the game itself reads (AES+gzip, re-emitted in the
+// exact JSON layout the file already has on disk, so it matches byte for byte
+// what a Bachi save writes); `json` is the same data as indented plaintext for a
+// human to read or hand-edit. The Dani Dojo configs are plaintext JSON on the
+// server either way — they have no encrypted form.
 
 import { zipSync } from 'fflate';
-import {
-  decodeJsonPayload,
-  encodeJsonPayload,
-  openEnvelope,
-} from '../codec';
+import { encodeJsonPayload, serializeDanConfig, type DanConfig } from '../codec';
+import type { DatatableName } from '../model/diff';
 import { datatableKeyOf, type RawDatatables } from './datatables';
 import type { ProjectRoot } from './project';
-import { sealDatatable } from './write';
+import { datatableStyleOnDisk, sealDatatable } from './write';
 
-type DatatableDraftKey = keyof RawDatatables;
+/** Where a bundle's contents belong. Shown in the dialog and the README. */
+export const SERVER_DATA_PATH = 'TaikoLocalServer/Host/wwwroot/data/';
 
-interface DraftEntry {
-  bin: string;
-  key: DatatableDraftKey;
-}
+/** The independently-selectable data sets a bundle can carry. */
+export type ServerBundlePart = 'musicMetadata' | 'musicOrder' | 'dan' | 'gaiden';
+
+export const SERVER_BUNDLE_PARTS: readonly ServerBundlePart[] = [
+  'musicMetadata',
+  'musicOrder',
+  'dan',
+  'gaiden',
+];
+
+/** `bin`: sealed as the game reads it · `json`: indented plaintext. */
+export type ServerBundleFormat = 'bin' | 'json';
+
+export type ServerBundleSelection = Record<ServerBundlePart, boolean>;
 
 export interface ServerBundleFile {
   path: string;
@@ -29,77 +50,93 @@ export interface ServerBundle {
   files: ServerBundleFile[];
 }
 
-const DRAFT_ENTRIES: DraftEntry[] = [
-  { bin: 'musicinfo.bin', key: 'musicinfo' },
-  { bin: 'music_order.bin', key: 'musicOrder' },
-  { bin: 'wordlist.bin', key: 'wordlist' },
-];
+/**
+ * What a bundle is built from. Every source is optional and independent: the
+ * game project (open in the editor) backs the two datatable parts, and each dani
+ * file slot backs one dan part. A part selected without its source is skipped.
+ */
+export interface ServerBundleSources {
+  project?: { root: ProjectRoot; datatables: RawDatatables };
+  dan?: DanConfig;
+  gaiden?: DanConfig;
+}
 
-const OPTIONAL_COPY_DATATABLES = ['neiro.bin'] as const;
+export interface ServerBundleRequest {
+  format: ServerBundleFormat;
+  parts: ServerBundleSelection;
+  sources: ServerBundleSources;
+  now?: Date;
+  /** True when the selection includes edits not yet saved to disk (README note). */
+  dirty?: boolean;
+}
+
+/** The datatable files each project-backed part owns. */
+const DATATABLE_FILES = {
+  musicMetadata: [
+    { name: 'musicinfo.bin', key: 'musicinfo' },
+    { name: 'wordlist.bin', key: 'wordlist' },
+    { name: 'music_attribute.bin', key: 'musicAttribute' },
+    { name: 'music_usbsetting.bin', key: 'musicUsbSetting' },
+    { name: 'music_ai_section.bin', key: 'musicAiSection' },
+  ],
+  musicOrder: [{ name: 'music_order.bin', key: 'musicOrder' }],
+} as const satisfies Record<string, readonly { name: DatatableName; key: keyof RawDatatables }[]>;
+
+/** The dani config file each dan part owns — plaintext JSON at the data root. */
+const DAN_FILES = { dan: 'dan_data.json', gaiden: 'gaiden_data.json' } as const;
+
+const DATATABLE_DIR = 'datatable';
 
 const encoder = new TextEncoder();
 
-function stamp(d = new Date()): string {
-  const p = (n: number, w = 2) => String(n).padStart(w, '0');
-  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+function isDanPart(part: ServerBundlePart): part is 'dan' | 'gaiden' {
+  return part === 'dan' || part === 'gaiden';
 }
 
 function jsonName(binName: string): string {
   return binName.replace(/\.bin$/i, '.json');
 }
 
-async function readBytes(dir: FileSystemDirectoryHandle, name: string): Promise<Uint8Array> {
-  const fh = await dir.getFileHandle(name);
-  const file = await fh.getFile();
-  return new Uint8Array(await file.arrayBuffer());
+/**
+ * The paths a part contributes, so the dialog can list exactly what the build
+ * will write rather than a hand-kept copy of it.
+ */
+export function serverBundlePaths(part: ServerBundlePart, format: ServerBundleFormat): string[] {
+  if (isDanPart(part)) return [DAN_FILES[part]];
+  return DATATABLE_FILES[part].map(
+    (f) => `${DATATABLE_DIR}/${format === 'bin' ? f.name : jsonName(f.name)}`,
+  );
 }
 
-async function addDraftDatatable(
-  zip: Record<string, Uint8Array>,
+function stamp(d = new Date()): string {
+  const p = (n: number, w = 2) => String(n).padStart(w, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
+}
+
+function readmeText(
+  ts: string,
+  format: ServerBundleFormat,
+  dirty: boolean,
   files: ServerBundleFile[],
-  binName: string,
-  obj: unknown,
-  keyHex: string,
-): Promise<void> {
-  const bin = await sealDatatable(obj, keyHex);
-  const json = encodeJsonPayload(obj, 2);
-  zip[binName] = bin;
-  zip[jsonName(binName)] = json;
-  files.push({ path: binName, bytes: bin.byteLength }, { path: jsonName(binName), bytes: json.byteLength });
-}
-
-async function addOptionalExistingDatatable(
-  root: ProjectRoot | undefined,
-  zip: Record<string, Uint8Array>,
-  files: ServerBundleFile[],
-  binName: string,
-): Promise<void> {
-  if (!root) return;
-  try {
-    const bin = await readBytes(root.datatable, binName);
-    const { payload } = await openEnvelope(bin, datatableKeyOf(root));
-    const decoded = decodeJsonPayload(payload);
-    const json = encodeJsonPayload(decoded, 2);
-    zip[binName] = bin;
-    zip[jsonName(binName)] = json;
-    files.push({ path: binName, bytes: bin.byteLength }, { path: jsonName(binName), bytes: json.byteLength });
-  } catch {
-    // Optional server-side datatables are copied only when readable and decodable.
-  }
-}
-
-function readmeText(ts: string, dirty: boolean, files: ServerBundleFile[]): Uint8Array {
+): Uint8Array {
   const body = [
     'Bachi server bundle',
     `Generated: ${ts}`,
+    `Format: ${format === 'bin' ? 'official .bin (encrypted, as the game reads it)' : 'plaintext .json (indented)'}`,
     '',
     'Target path:',
-    'TaikoLocalServer/Host/wwwroot/data/datatable/',
+    SERVER_DATA_PATH,
     '',
-    'Copy every file in this zip into the target folder, replacing existing files, then restart TaikoLocalServer.',
+    'This zip mirrors that folder. Unpack it there keeping the folder structure —',
+    'datatable files go in datatable/, dani configs sit at the root — replacing',
+    'existing files, then restart TaikoLocalServer.',
+    '',
+    format === 'json'
+      ? 'The server prefers a datatable\'s .json sibling over its .bin, so these files take effect as they are. Remove them again to fall back to the .bin files already on the server.'
+      : 'These are the same bytes the game itself reads.',
     dirty
-      ? 'This bundle was generated from the current in-memory Bachi draft. Save the project before copying if the game files must match the server files.'
-      : 'This bundle was generated from the current project datatables.',
+      ? 'Some of this bundle came from unsaved Bachi drafts. Save the project and/or dani files before copying if the files on disk must match this bundle.'
+      : 'This bundle matches what is currently loaded in Bachi.',
     '',
     'Files:',
     ...files.map((f) => `- ${f.path} (${f.bytes.toLocaleString()} bytes)`),
@@ -108,26 +145,48 @@ function readmeText(ts: string, dirty: boolean, files: ServerBundleFile[]): Uint
   return encoder.encode(body);
 }
 
-export async function buildServerBundle(
-  root: ProjectRoot,
-  datatables: RawDatatables,
-  opts: { now?: Date; dirty?: boolean } = {},
-): Promise<ServerBundle> {
+export async function buildServerBundle(req: ServerBundleRequest): Promise<ServerBundle> {
   const zip: Record<string, Uint8Array> = {};
   const files: ServerBundleFile[] = [];
-  const datatableKey = datatableKeyOf(root);
+  const add = (path: string, bytes: Uint8Array) => {
+    zip[path] = bytes;
+    files.push({ path, bytes: bytes.byteLength });
+  };
 
-  for (const entry of DRAFT_ENTRIES) {
-    await addDraftDatatable(zip, files, entry.bin, datatables[entry.key], datatableKey);
-  }
-  for (const binName of OPTIONAL_COPY_DATATABLES) {
-    await addOptionalExistingDatatable(root, zip, files, binName);
+  const { project } = req.sources;
+  if (project) {
+    // Plain JSON needs no game key; sealed .bin output resolves it once for the
+    // whole run.
+    const keyHex = req.format === 'bin' ? datatableKeyOf(project.root) : undefined;
+    for (const part of ['musicMetadata', 'musicOrder'] as const) {
+      if (!req.parts[part]) continue;
+      for (const file of DATATABLE_FILES[part]) {
+        const obj = project.datatables[file.key];
+        if (!obj) {
+          throw new Error(`Cannot export ${file.name}: the table was not loaded from this project.`);
+        }
+        if (req.format === 'bin') {
+          const style = await datatableStyleOnDisk(project.root, file.name, keyHex!);
+          add(`${DATATABLE_DIR}/${file.name}`, await sealDatatable(obj, keyHex!, style));
+        } else {
+          add(`${DATATABLE_DIR}/${jsonName(file.name)}`, encodeJsonPayload(obj, 2));
+        }
+      }
+    }
   }
 
-  const ts = stamp(opts.now);
-  const readme = readmeText(ts, Boolean(opts.dirty), files);
-  zip['README.txt'] = readme;
-  files.push({ path: 'README.txt', bytes: readme.byteLength });
+  for (const part of ['dan', 'gaiden'] as const) {
+    const config = req.sources[part];
+    if (!req.parts[part] || !config) continue;
+    add(DAN_FILES[part], encoder.encode(serializeDanConfig(config)));
+  }
+
+  if (files.length === 0) {
+    throw new Error('Nothing was selected to export.');
+  }
+
+  const ts = stamp(req.now);
+  add('README.txt', readmeText(ts, req.format, Boolean(req.dirty), [...files]));
 
   return {
     filename: `bachi-server-bundle-${ts}.zip`,

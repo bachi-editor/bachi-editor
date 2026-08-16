@@ -11,6 +11,7 @@ import type {
   FumenBranch,
   FumenMeasure,
   FumenNote,
+  GameVersion,
   MusicInfoChartDerivedPatch,
   MusicInfoEditableField,
 } from '../codec';
@@ -35,7 +36,7 @@ import {
   type ChartScoring,
 } from './fumenScaffold';
 import { SHINUCHI_ABSENT, shinuchiScoring } from './shinuchi';
-import type { Locale } from './songlist';
+import { localesForGameVersion, type Locale } from './songlist';
 
 const BRANCHES = ['normal', 'professional', 'master'] as const;
 type TjaBranch = (typeof BRANCHES)[number];
@@ -280,14 +281,6 @@ export const SHINUTI_SCORE_FIELDS: Record<FumenDifficulty, readonly ShinutiField
   oni: ['shinutiScoreMania', 'shinutiScoreManiaDuet'],
   ura: ['shinutiScoreUra', 'shinutiScoreUraDuet'],
 };
-
-const LOCALES: Locale[] = [
-  'japaneseText',
-  'englishUsText',
-  'chineseTText',
-  'chineseSText',
-  'koreanText',
-];
 
 function stripComment(line: string): string {
   const index = line.indexOf('//');
@@ -1307,9 +1300,10 @@ export function applyTjaImportMetadata(
   uniqueId: number,
   songId: string,
   imported: TjaImportResult,
+  gameVersion?: GameVersion,
 ): RawDatatables {
   let next = datatables;
-  for (const locale of LOCALES) {
+  for (const { value: locale } of localesForGameVersion(gameVersion)) {
     next = setTitle(next, songId, locale, imported.title[locale]);
     next = setSubtitle(next, songId, locale, imported.subtitle[locale]);
   }

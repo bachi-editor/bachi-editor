@@ -9,6 +9,7 @@ import {
   useState,
 } from 'react';
 import {
+  allocateNus3BankId,
   loadSoundFileInfo,
   readSoundBankBytes,
   resolveSoundFile,
@@ -636,7 +637,9 @@ export function SoundTab({ row }: { row: SongRow }) {
     try {
       const existingBank = await readSoundBankBytes(root, row.info);
       let templateBank: Uint8Array | undefined;
+      let bankId: number | undefined;
       if (!existingBank) {
+        bankId = await allocateNus3BankId(root, inventorySignal ?? [], row.uniqueId);
         const response = await fetch(songTemplateUrl);
         if (!response.ok) throw new Error(`Could not load the nus3bank template (${response.status}).`);
         templateBank = new Uint8Array(await response.arrayBuffer());
@@ -649,6 +652,7 @@ export function SoundTab({ row }: { row: SongRow }) {
         preferredStem: stem,
         songId: row.id,
         uniqueId: row.uniqueId,
+        bankId,
         demoStartMs: savedDemoStartMs,
       });
       const output = new File(

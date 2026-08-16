@@ -6,12 +6,24 @@
 // internally uniform), so a byte diff of a re-serialised file is meaningless.
 // What the user cares about is "starMania 8 → 9", and that's what we compute.
 
-import type { RawDatatables } from '../fs/datatables';
-import { MUSICINFO_SUPPORTED_FIELDS, type MusicInfoItem, type MusicOrderItem, type WordListItem } from '../codec';
+import { COMPANION_TABLES, COMPANION_TABLE_KEYS, type RawDatatables } from '../fs/datatables';
+import {
+  MUSICINFO_SUPPORTED_FIELDS,
+  type CompanionSongItem,
+  type MusicInfoItem,
+  type MusicOrderItem,
+  type WordListItem,
+} from '../codec';
 import { LOCALE_KEYS } from './edits';
 import { sameMusicOrderItems } from './musicOrder';
 
-export type DatatableName = 'musicinfo.bin' | 'music_order.bin' | 'wordlist.bin';
+export type DatatableName =
+  | 'musicinfo.bin'
+  | 'music_order.bin'
+  | 'wordlist.bin'
+  | 'music_attribute.bin'
+  | 'music_usbsetting.bin'
+  | 'music_ai_section.bin';
 
 export interface FieldChange {
   /** Human label, e.g. "starMania" or "title · 简体中文". */
@@ -128,11 +140,61 @@ function diffMusicOrder(base: MusicOrderItem[], draft: MusicOrderItem[]): FileDi
   };
 }
 
+/**
+ * Companion tables only ever gain or lose whole rows — the editor adds one when
+ * a song is created and drops it when a song is deleted, and never touches a
+ * field. So the diff is a row-set diff, reported per song rather than per field.
+ */
+function diffCompanion(
+  file: DatatableName,
+  base: CompanionSongItem[] | undefined,
+  draft: CompanionSongItem[] | undefined,
+): FileDiff {
+  const empty: FileDiff = { file, dirty: false, changes: [], changedRecords: 0, summary: 'no change' };
+  if (!base || !draft) return empty;
+  const identity = (row: CompanionSongItem) => JSON.stringify([row.id, row.uniqueId]);
+  const remainingBase = new Map<string, number>();
+  for (const row of base) {
+    const key = identity(row);
+    remainingBase.set(key, (remainingBase.get(key) ?? 0) + 1);
+  }
+  const changes: FieldChange[] = [];
+  for (const row of draft) {
+    const key = identity(row);
+    const count = remainingBase.get(key) ?? 0;
+    if (count > 0) {
+      remainingBase.set(key, count - 1);
+    } else {
+      changes.push({ label: `+ ${row.id}`, from: '—', to: `Song No. ${row.uniqueId}` });
+    }
+  }
+  for (const row of base) {
+    const key = identity(row);
+    const count = remainingBase.get(key) ?? 0;
+    if (count <= 0) continue;
+    changes.push({ label: `− ${row.id}`, from: `Song No. ${row.uniqueId}`, to: '—' });
+    remainingBase.set(key, count - 1);
+  }
+  if (changes.length === 0) return empty;
+  return {
+    file,
+    dirty: true,
+    changes,
+    changedRecords: changes.length,
+    summary: `${changes.length} ${changes.length === 1 ? 'row' : 'rows'}`,
+  };
+}
+
 export function diffDatatables(base: RawDatatables, draft: RawDatatables): ProjectDiff {
   const files: FileDiff[] = [
     diffMusicInfo(base.musicinfo.items, draft.musicinfo.items),
     diffMusicOrder(base.musicOrder.items, draft.musicOrder.items),
     diffWordlist(base.wordlist.items, draft.wordlist.items),
+    ...COMPANION_TABLE_KEYS.map((field) => diffCompanion(
+      COMPANION_TABLES[field],
+      base[field]?.items,
+      draft[field]?.items,
+    )),
   ];
   const totalEdits = files.reduce((n, f) => n + f.changedRecords, 0);
   return { files, totalEdits, dirty: files.some((f) => f.dirty) };

@@ -1,7 +1,7 @@
 {
   "name": "taiko-arcade-editor",
   "private": true,
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Browser-only editor for Taiko no Tatsujin Nijiiro data.",
   "homepage": "https://bachi-editor.github.io/",
   "license": "MIT",

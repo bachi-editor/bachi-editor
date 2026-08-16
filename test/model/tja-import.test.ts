@@ -60,8 +60,22 @@ function datatables(): RawDatatables {
     musicOrder: { items: [] },
     wordlist: {
       items: [
-        { key: 'song_target', englishUsText: 'Old title' },
-        { key: 'song_sub_target', englishUsText: 'Old subtitle' },
+        {
+          key: 'song_target',
+          japaneseText: '', japaneseFontType: 0,
+          englishUsText: 'Old title', englishUsFontType: 0,
+          chineseTText: '', chineseTFontType: 0,
+          chineseSText: '', chineseSFontType: 0,
+          koreanText: '', koreanFontType: 0,
+        },
+        {
+          key: 'song_sub_target',
+          japaneseText: '', japaneseFontType: 0,
+          englishUsText: 'Old subtitle', englishUsFontType: 0,
+          chineseTText: '', chineseTFontType: 0,
+          chineseSText: '', chineseSFontType: 0,
+          koreanText: '', koreanFontType: 0,
+        },
       ],
     },
   };
@@ -140,6 +154,26 @@ describe('TJA import conversion', () => {
       chineseTText: '中文標題',
       chineseSText: '中文標題',
       koreanText: 'Fallback title',
+    });
+  });
+
+  test('JPN metadata import leaves Simplified Chinese untouched while applying supported locales', () => {
+    const imported = convertTjaForImport(TJA);
+    const seeded = datatables();
+    const title = seeded.wordlist.items.find((item) => item.key === 'song_target')!;
+    const subtitle = seeded.wordlist.items.find((item) => item.key === 'song_sub_target')!;
+    title.chineseSText = 'keep JPN title sentinel';
+    subtitle.chineseSText = 'keep JPN subtitle sentinel';
+
+    const next = applyTjaImportMetadata(seeded, 17, 'target', imported, 'jpn');
+    expect(next.wordlist.items.find((item) => item.key === 'song_target')).toMatchObject({
+      japaneseText: '日本語タイトル',
+      chineseTText: '中文標題',
+      chineseSText: 'keep JPN title sentinel',
+    });
+    expect(next.wordlist.items.find((item) => item.key === 'song_sub_target')).toMatchObject({
+      japaneseText: '日本語サブ',
+      chineseSText: 'keep JPN subtitle sentinel',
     });
   });
 

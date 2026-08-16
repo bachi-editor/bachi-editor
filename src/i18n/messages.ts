@@ -223,6 +223,31 @@ export const messages = {
     'zh-Hant': '變更',
   },
 
+  'setup.gameVersion.title': {
+    en: 'Game version',
+    ja: 'ゲームバージョン',
+    'zh-Hans': '游戏版本',
+    'zh-Hant': '遊戲版本',
+  },
+  'setup.gameVersion.hint': {
+    en: 'Required because CHN and JPN store some fields differently. Choose the version that produced this Data folder.',
+    ja: 'CHN 版と JPN 版では一部のフィールド形式が異なるため必須です。この Data フォルダーのゲームバージョンを選択してください。',
+    'zh-Hans': 'CHN 版和 JPN 版的部分字段格式不同，因此必须选择。请选择生成此 Data 文件夹的游戏版本。',
+    'zh-Hant': 'CHN 版和 JPN 版的部分欄位格式不同，因此必須選擇。請選擇產生此 Data 資料夾的遊戲版本。',
+  },
+  'setup.gameVersion.chn': {
+    en: 'China version (CHN)',
+    ja: '中国版（CHN）',
+    'zh-Hans': '中国版（CHN）',
+    'zh-Hant': '中國版（CHN）',
+  },
+  'setup.gameVersion.jpn': {
+    en: 'Japan version (JPN)',
+    ja: '日本版（JPN）',
+    'zh-Hans': '日本版（JPN）',
+    'zh-Hant': '日本版（JPN）',
+  },
+
   'setup.step2.datatableKey': {
     en: 'Datatable key',
     ja: 'データテーブルキー',
@@ -268,6 +293,12 @@ export const messages = {
     'zh-Hans': '该文件夹看起来不是 Taiko 安装目录——请选择游戏的 Data 文件夹（其中应包含带 datatable/、fumen/、sound/ 的 x64/）。',
     'zh-Hant': '此資料夾看起來不是 Taiko 安裝目錄——請選擇遊戲的 Data 資料夾（其中應包含帶 datatable/、fumen/、sound/ 的 x64/）。',
   },
+  'setup.error.gameVersionMismatch': {
+    en: 'You selected {selected}, but this project’s datatables match {detected}. Choose {detected} and try again.',
+    ja: '{selected} が選択されていますが、このプロジェクトのデータテーブルは {detected} と一致します。{detected} を選択して、もう一度お試しください。',
+    'zh-Hans': '已选择{selected}，但此项目的数据表与{detected}匹配。请选择{detected}后重试。',
+    'zh-Hant': '已選擇{selected}，但此專案的資料表與{detected}相符。請選擇{detected}後重試。',
+  },
   'setup.error.datatableKey': {
     en: 'The datatable key looks incorrect — the datatables didn’t decrypt.',
     ja: 'データテーブルキーが正しくないようです（データテーブルを復号できませんでした）。',
@@ -299,10 +330,10 @@ export const messages = {
     'zh-Hant': '開啟專案時發生問題。',
   },
   'setup.error.checkHint': {
-    en: 'Double-check both keys and the selected folder, then try again.',
-    ja: '両方のキーと選択したフォルダーを確認してから、もう一度お試しください。',
-    'zh-Hans': '请核对两个密钥和所选文件夹，然后重试。',
-    'zh-Hant': '請核對兩個金鑰和所選資料夾，然後重試。',
+    en: 'Double-check the game version, both keys, and the selected folder, then try again.',
+    ja: 'ゲームバージョン、両方のキー、選択したフォルダーを確認してから、もう一度お試しください。',
+    'zh-Hans': '请核对游戏版本、两个密钥和所选文件夹，然后重试。',
+    'zh-Hant': '請核對遊戲版本、兩個金鑰和所選資料夾，然後重試。',
   },
 
   // Remembered folder (permission lapsed)
@@ -338,10 +369,10 @@ export const messages = {
     'zh-Hans': '游戏项目', 'zh-Hant': '遊戲專案',
   },
   'settings.project.hint': {
-    en: 'The folder and both AES keys are required to load and save game data.',
-    ja: 'ゲームデータの読み込みと保存には、フォルダーと 2 つの AES キーが必要です。',
-    'zh-Hans': '加载和保存游戏数据需要文件夹和两个 AES 密钥。',
-    'zh-Hant': '載入和儲存遊戲資料需要資料夾和兩個 AES 金鑰。',
+    en: 'The game version, folder, and both AES keys are required to load and save game data.',
+    ja: 'ゲームデータの読み込みと保存には、ゲームバージョン、フォルダー、2 つの AES キーが必要です。',
+    'zh-Hans': '加载和保存游戏数据需要游戏版本、文件夹和两个 AES 密钥。',
+    'zh-Hant': '載入和儲存遊戲資料需要遊戲版本、資料夾和兩個 AES 金鑰。',
   },
   'settings.project.open': {
     en: 'Project open', ja: 'プロジェクトを開いています',
@@ -478,6 +509,8 @@ export const messages = {
   'common.remove': { en: 'Remove', ja: '削除', 'zh-Hans': '移除', 'zh-Hant': '移除' },
   'common.retry': { en: 'Retry', ja: '再試行', 'zh-Hans': '重试', 'zh-Hant': '重試' },
   'common.confirm': { en: 'Continue', ja: '続行', 'zh-Hans': '继续', 'zh-Hant': '繼續' },
+  /** Tag on an unpicked group header (see ui/shell/PartHeader). */
+  'common.skipped': { en: 'skipped', ja: 'スキップ', 'zh-Hans': '跳过', 'zh-Hant': '略過' },
 
   // Editor tabs
   'tabs.metadata': { en: 'Metadata', ja: 'メタデータ', 'zh-Hans': '元数据', 'zh-Hant': '後設資料' },
@@ -528,7 +561,6 @@ export const messages = {
     'zh-Hant': '音符數、譜面分歧、連打時間和氣球合計也會依各匯入的單人譜面重新計算。',
   },
   'importtja.chartsGroup': { en: 'Chart files to overwrite', ja: '上書きする譜面ファイル', 'zh-Hans': '将覆盖的谱面文件', 'zh-Hant': '將覆寫的譜面檔案' },
-  'importtja.skipped': { en: 'skipped', ja: 'スキップ', 'zh-Hans': '跳过', 'zh-Hant': '略過' },
   'importtja.nothingSelected': {
     en: 'Select at least one part to import.', ja: 'インポートする項目を1つ以上選択してください。',
     'zh-Hans': '请至少选择一项要导入的内容。', 'zh-Hant': '請至少選擇一項要匯入的內容。',
@@ -1080,6 +1112,40 @@ export const messages = {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
   },
+  'about.release.0_0_5.title': {
+    en: 'Regional data and server exports', ja: '地域別データとサーバーエクスポート',
+    'zh-Hans': '地区数据与服务器导出', 'zh-Hant': '地區資料與伺服器匯出',
+  },
+  'about.release.0_0_5.serverBundle': {
+    en: 'Server bundle export is back with independent choices for music metadata, music order, Dani Dojo, and Gaiden, plus official .bin or readable .json output in the correct server folder layout.',
+    ja: 'サーバーバンドルのエクスポートを復活させ、楽曲メタデータ・曲順・段位道場・外伝を個別に選び、正しいサーバーフォルダー構成で公式 .bin または可読 .json を出力できるようにしました。',
+    'zh-Hans': '恢复了服务器捆绑包导出，可分别选择乐曲元数据、乐曲顺序、段位道场和外传，并按正确的服务器文件夹结构输出官方 .bin 或可读 .json。',
+    'zh-Hant': '恢復了伺服器套件匯出，可分別選擇樂曲中繼資料、樂曲順序、段位道場和外傳，並依正確的伺服器資料夾結構輸出官方 .bin 或可讀 .json。',
+  },
+  'about.release.0_0_5.gameVersion': {
+    en: 'Opening a project now requires selecting CHN or JPN, remembers that choice, and warns when the selected version does not match the datatables.',
+    ja: 'プロジェクトを開く際に CHN 版または JPN 版の選択が必須になりました。選択は記憶され、データテーブルと一致しない場合は警告します。',
+    'zh-Hans': '打开项目时现在必须选择 CHN 版或 JPN 版；该选择会被记住，并会在所选版本与数据表不匹配时发出警告。',
+    'zh-Hant': '開啟專案時現在必須選擇 CHN 版或 JPN 版；該選擇會被記住，並會在所選版本與資料表不相符時發出警告。',
+  },
+  'about.release.0_0_5.regionalData': {
+    en: 'New songs and metadata edits now follow the stored regional datatable shape and field types, preserving JPN integers, CHN booleans, and each version’s wordlist columns.',
+    ja: '新規楽曲とメタデータ編集が、保存済みの地域別データテーブルの形状とフィールド型に従うようになりました。JPN 版の整数、CHN 版の真偽値、各版のワードリスト列を保持します。',
+    'zh-Hans': '新增歌曲和元数据编辑现在会遵循已存储的地区数据表结构和字段类型，保留 JPN 版的整数、CHN 版的布尔值以及各版本的词条表列。',
+    'zh-Hant': '新增歌曲和中繼資料編輯現在會遵循已儲存的地區資料表結構和欄位型別，保留 JPN 版的整數、CHN 版的布林值以及各版本的詞條表欄位。',
+  },
+  'about.release.0_0_5.companionTables': {
+    en: 'Adding and deleting songs now keeps music_attribute, music_usbsetting, and music_ai_section in sync, and saving is blocked if required companion rows are missing.',
+    ja: '楽曲の追加・削除時に music_attribute・music_usbsetting・music_ai_section も同期し、必要な補助行が欠けている場合は保存を停止するようにしました。',
+    'zh-Hans': '添加和删除歌曲时现在会同步 music_attribute、music_usbsetting 和 music_ai_section；缺少必要的配套行时将阻止保存。',
+    'zh-Hant': '新增和刪除歌曲時現在會同步 music_attribute、music_usbsetting 和 music_ai_section；缺少必要的配套資料列時將阻止儲存。',
+  },
+  'about.release.0_0_5.soundBanks': {
+    en: 'New and re-encoded NUS3BANK files now write counted NUL-terminated names and allocated bank IDs, fixing output whose songs had no preview and would not start.',
+    ja: '新規作成または再エンコードした NUS3BANK に、NUL 終端文字を長さに含めた名前と割り当て済みバンク ID を書き込むようにし、試聴できず開始もしなかった出力を修正しました。',
+    'zh-Hans': '新建和重新编码的 NUS3BANK 现在会写入长度中包含 NUL 终止符的名称以及分配的音频库 ID，修复了歌曲无法试听且无法开始的输出。',
+    'zh-Hant': '新建和重新編碼的 NUS3BANK 現在會寫入長度中包含 NUL 終止符的名稱以及分配的音訊庫 ID，修正了歌曲無法試聽且無法開始的輸出。',
+  },
   'about.release.0_0_4.title': {
     en: 'TJA import options', ja: 'TJAインポートの選択',
     'zh-Hans': 'TJA 导入选项', 'zh-Hant': 'TJA 匯入選項',
@@ -1587,10 +1653,10 @@ export const messages = {
     'zh-Hans': '歌曲 ID {id} · 歌曲编号 {no}', 'zh-Hant': '歌曲 ID {id} · 歌曲編號 {no}',
   },
   'deletesong.confirm': {
-    en: 'Remove {title} from musicinfo, music_order and wordlist?',
-    ja: '{title} を musicinfo・music_order・wordlist から削除しますか？',
-    'zh-Hans': '从 musicinfo、music_order 和 wordlist 中移除 {title}？',
-    'zh-Hant': '從 musicinfo、music_order 和 wordlist 中移除 {title}？',
+    en: 'Remove {title} from the song catalogue, order, wordlist and companion tables?',
+    ja: '{title} を楽曲カタログ・曲順・ワードリスト・補助テーブルから削除しますか？',
+    'zh-Hans': '从歌曲目录、顺序、词条表和配套数据表中移除 {title}？',
+    'zh-Hant': '從歌曲目錄、順序、詞條表和配套資料表中移除 {title}？',
   },
   'deletesong.filesBoth': {
     en: 'On save, its chart folder and sound file will be permanently removed from disk.',
@@ -1627,39 +1693,106 @@ export const messages = {
     'zh-Hans': '导出服务器捆绑包', 'zh-Hant': '匯出伺服器套件',
   },
   'export.intro': {
-    en: 'Builds a zip for {path}. Copy the contents there and restart the server.',
-    ja: '{path} 用の zip を作成します。中身をそこにコピーし、サーバーを再起動してください。',
-    'zh-Hans': '为 {path} 构建一个 zip。将其内容复制到该位置并重启服务器。',
-    'zh-Hant': '為 {path} 建立一個 zip。將其內容複製到該位置並重新啟動伺服器。',
+    en: 'Builds a zip that mirrors {path}. Pick what to send, unpack it there keeping the folders, then restart the server.',
+    ja: '{path} の構成をそのまま再現した zip を作成します。送る内容を選び、フォルダー構成を保ったままそこへ展開し、サーバーを再起動してください。',
+    'zh-Hans': '构建一个与 {path} 结构一致的 zip。选择要发送的内容，保持文件夹结构解压到该位置，然后重启服务器。',
+    'zh-Hant': '建立一個與 {path} 結構一致的 zip。選擇要傳送的內容，保持資料夾結構解壓到該位置，然後重新啟動伺服器。',
   },
-  'export.dirtyWarn.one': {
-    en: '{n} unsaved edit will be included from the current Bachi draft. Save first if the game files on disk must match this bundle.',
-    ja: '{n} 件の未保存の編集が現在の Bachi ドラフトから含まれます。ディスク上のゲームファイルとこのバンドルを一致させるには、先に保存してください。',
-    'zh-Hans': '当前 Bachi 草稿中有 {n} 项未保存的编辑将被包含。如果磁盘上的游戏文件必须与此捆绑包一致，请先保存。',
-    'zh-Hant': '目前 Bachi 草稿中有 {n} 項未儲存的編輯將被包含。如果磁碟上的遊戲檔案必須與此套件一致，請先儲存。',
+  'export.part.musicMetadata': {
+    en: 'Music metadata', ja: '楽曲メタデータ',
+    'zh-Hans': '乐曲元数据', 'zh-Hant': '樂曲中繼資料',
   },
-  'export.dirtyWarn.other': {
-    en: '{n} unsaved edits will be included from the current Bachi draft. Save first if the game files on disk must match this bundle.',
-    ja: '{n} 件の未保存の編集が現在の Bachi ドラフトから含まれます。ディスク上のゲームファイルとこのバンドルを一致させるには、先に保存してください。',
-    'zh-Hans': '当前 Bachi 草稿中有 {n} 项未保存的编辑将被包含。如果磁盘上的游戏文件必须与此捆绑包一致，请先保存。',
-    'zh-Hant': '目前 Bachi 草稿中有 {n} 項未儲存的編輯將被包含。如果磁碟上的遊戲檔案必須與此套件一致，請先儲存。',
+  'export.part.musicMetadataSum': {
+    en: 'Song entries, gameplay companion settings, ratings, scoring and localized text.',
+    ja: '楽曲エントリ、ゲーム用補助設定、難易度、スコア設定、各言語のテキスト。',
+    'zh-Hans': '乐曲条目、游戏配套设置、难度、配分和本地化文本。',
+    'zh-Hant': '樂曲條目、遊戲配套設定、難度、配分和本地化文字。',
   },
-  'export.bundleContents': { en: 'Bundle contents', ja: 'バンドルの内容', 'zh-Hans': '捆绑包内容', 'zh-Hant': '套件內容' },
-  'export.datatableSum': {
-    en: 'Current decoded datatable draft, sealed for game/server use.',
-    ja: '現在のデコード済みデータテーブルのドラフト。ゲーム／サーバー用に封をしています。',
-    'zh-Hans': '当前解码的数据表草稿，已封装以供游戏/服务器使用。',
-    'zh-Hant': '目前解碼的資料表草稿，已封裝以供遊戲/伺服器使用。',
+  'export.part.musicOrder': { en: 'Music order', ja: '曲順', 'zh-Hans': '乐曲顺序', 'zh-Hant': '樂曲順序' },
+  'export.part.musicOrderSum': {
+    en: 'Which genre folder each song sits in, and its position there.',
+    ja: '各楽曲が属するジャンルフォルダーと、その中での並び順。',
+    'zh-Hans': '每首乐曲所属的分类文件夹及其在其中的位置。',
+    'zh-Hant': '每首樂曲所屬的分類資料夾及其在其中的位置。',
   },
-  'export.neiroSum': {
-    en: 'Copied through when the project has a readable neiro datatable.',
-    ja: 'プロジェクトに読み取り可能な neiro データテーブルがある場合にコピーされます。',
-    'zh-Hans': '当项目具有可读的 neiro 数据表时复制。',
-    'zh-Hant': '當專案具有可讀的 neiro 資料表時複製。',
+  'export.part.dan': { en: 'Dani Dojo', ja: '段位道場', 'zh-Hans': '段位道场', 'zh-Hant': '段位道場' },
+  'export.part.danSum': {
+    en: 'The normal dan ranks: their odai songs and clear criteria.',
+    ja: '通常の段位: お題楽曲と合格条件。',
+    'zh-Hans': '常规段位：其课题歌曲与合格条件。',
+    'zh-Hant': '常規段位：其課題歌曲與合格條件。',
   },
-  'export.readmeSum': {
-    en: 'Target path and restart reminder.', ja: 'コピー先のパスと再起動のリマインダー。',
-    'zh-Hans': '目标路径和重启提醒。', 'zh-Hant': '目標路徑和重新啟動提醒。',
+  'export.part.gaiden': { en: 'Gaiden', ja: '外伝', 'zh-Hans': '外传', 'zh-Hant': '外傳' },
+  'export.part.gaidenSum': {
+    en: 'The gaiden dan sets: their odai songs and clear criteria.',
+    ja: '外伝の段位セット: お題楽曲と合格条件。',
+    'zh-Hans': '外传段位组：其课题歌曲与合格条件。',
+    'zh-Hant': '外傳段位組：其課題歌曲與合格條件。',
+  },
+  'export.needProject': {
+    en: 'No game project is open — open one in Settings to export this.',
+    ja: 'ゲームプロジェクトが開かれていません。エクスポートするには設定から開いてください。',
+    'zh-Hans': '未打开游戏项目——请在设置中打开一个后再导出。',
+    'zh-Hant': '未開啟遊戲專案——請在設定中開啟一個後再匯出。',
+  },
+  'export.needCompanionTables': {
+    en: 'One or more companion music tables could not be loaded, so this bundle would be incomplete.',
+    ja: '楽曲の補助テーブルを読み込めなかったため、不完全なバンドルは出力できません。',
+    'zh-Hans': '一个或多个乐曲配套数据表无法加载，因此不能导出不完整的捆绑包。',
+    'zh-Hant': '一個或多個樂曲配套資料表無法載入，因此不能匯出不完整的套件。',
+  },
+  'export.needDaniFile': {
+    en: 'This file is not open — load it on the Dani Dojo page to export it.',
+    ja: 'このファイルは開かれていません。エクスポートするには段位道場ページで読み込んでください。',
+    'zh-Hans': '此文件未打开——请在段位道场页面加载后再导出。',
+    'zh-Hant': '此檔案未開啟——請在段位道場頁面載入後再匯出。',
+  },
+  'export.emptyDaniFile': {
+    en: 'This file has no dan entries, so there is nothing to send.',
+    ja: 'このファイルには段のエントリがないため、送るものがありません。',
+    'zh-Hans': '此文件没有段位条目，因此没有可发送的内容。',
+    'zh-Hant': '此檔案沒有段位條目，因此沒有可傳送的內容。',
+  },
+  'export.formatGroup': { en: 'Format', ja: '形式', 'zh-Hans': '格式', 'zh-Hant': '格式' },
+  'export.format.bin': {
+    en: 'Official .bin', ja: '公式 .bin', 'zh-Hans': '官方 .bin', 'zh-Hant': '官方 .bin',
+  },
+  'export.format.binSum': {
+    en: 'Encrypted datatables, byte for byte what the game itself reads.',
+    ja: '暗号化されたデータテーブル。ゲーム自身が読むものとバイト単位で同一です。',
+    'zh-Hans': '加密的数据表，与游戏本身读取的内容逐字节一致。',
+    'zh-Hant': '加密的資料表，與遊戲本身讀取的內容逐位元組一致。',
+  },
+  'export.format.json': {
+    en: 'Readable .json', ja: '可読 .json', 'zh-Hans': '可读 .json', 'zh-Hant': '可讀 .json',
+  },
+  'export.format.jsonSum': {
+    en: 'Indented plaintext you can read and hand-edit. The server prefers these over the .bin files.',
+    ja: 'インデント付きのプレーンテキストで、閲覧や手編集ができます。サーバーは .bin より優先して読み込みます。',
+    'zh-Hans': '带缩进的纯文本，便于阅读和手工编辑。服务器会优先使用它们而非 .bin。',
+    'zh-Hant': '帶縮排的純文字，便於閱讀和手動編輯。伺服器會優先使用它們而非 .bin。',
+  },
+  'export.formatDanNote': {
+    en: 'The Dani Dojo files are plaintext JSON on the server either way — the format applies to the datatables.',
+    ja: '段位道場のファイルはどちらの形式でもサーバー上ではプレーンテキストの JSON です。形式の選択はデータテーブルに適用されます。',
+    'zh-Hans': '无论选择哪种格式，段位道场文件在服务器上都是纯文本 JSON；格式选择只作用于数据表。',
+    'zh-Hant': '無論選擇哪種格式，段位道場檔案在伺服器上都是純文字 JSON；格式選擇只作用於資料表。',
+  },
+  'export.readmeAlways': {
+    en: 'A README.txt with the target path and a restart reminder is always included.',
+    ja: 'コピー先のパスと再起動のリマインダーを記した README.txt が常に含まれます。',
+    'zh-Hans': '始终包含一个写有目标路径和重启提醒的 README.txt。',
+    'zh-Hant': '始終包含一個寫有目標路徑和重新啟動提醒的 README.txt。',
+  },
+  'export.dirtyWarn': {
+    en: 'Unsaved Bachi edits will be included: {parts}. Save first if the files on disk must match this bundle.',
+    ja: '未保存の Bachi の編集が含まれます: {parts}。ディスク上のファイルとこのバンドルを一致させるには、先に保存してください。',
+    'zh-Hans': '将包含未保存的 Bachi 编辑：{parts}。如果磁盘上的文件必须与此捆绑包一致，请先保存。',
+    'zh-Hant': '將包含未儲存的 Bachi 編輯：{parts}。如果磁碟上的檔案必須與此套件一致，請先儲存。',
+  },
+  'export.nothingSelected': {
+    en: 'Select at least one data set to export.', ja: 'エクスポートするデータを1つ以上選択してください。',
+    'zh-Hans': '请至少选择一项要导出的数据。', 'zh-Hant': '請至少選擇一項要匯出的資料。',
   },
   'export.created': { en: 'Created', ja: '作成済み', 'zh-Hans': '已创建', 'zh-Hant': '已建立' },
   'export.downloaded': {
@@ -1672,7 +1805,14 @@ export const messages = {
     'zh-Hans': '捆绑包已下载', 'zh-Hant': '套件已下載',
   },
   'export.statusFailed': { en: '✗ export failed', ja: '✗ エクスポート失敗', 'zh-Hans': '✗ 导出失败', 'zh-Hant': '✗ 匯出失敗' },
-  'export.statusReady': { en: 'datatables ready', ja: 'データテーブル準備完了', 'zh-Hans': '数据表就绪', 'zh-Hant': '資料表就緒' },
+  'export.statusReady.one': {
+    en: '{n} data set ready', ja: 'データ {n} 件を準備完了',
+    'zh-Hans': '已就绪 {n} 项数据', 'zh-Hant': '已就緒 {n} 項資料',
+  },
+  'export.statusReady.other': {
+    en: '{n} data sets ready', ja: 'データ {n} 件を準備完了',
+    'zh-Hans': '已就绪 {n} 项数据', 'zh-Hant': '已就緒 {n} 項資料',
+  },
   'export.building': { en: 'Building…', ja: '作成中…', 'zh-Hans': '构建中…', 'zh-Hant': '建立中…' },
   'export.downloadAgain': { en: 'Download again', ja: '再ダウンロード', 'zh-Hans': '再次下载', 'zh-Hant': '再次下載' },
   'export.buildZip': { en: 'Build zip', ja: 'zip を作成', 'zh-Hans': '构建 zip', 'zh-Hant': '建立 zip' },

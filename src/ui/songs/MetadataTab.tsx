@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react';
 import { useAppStore } from '../../model/store';
-import { LOCALES, type Locale, type SongRow } from '../../model/songlist';
+import { localesForGameVersion, type Locale, type SongRow } from '../../model/songlist';
 import type { FumenDifficulty } from '../../fs/fumens';
 import { genreMessageKey } from '../../model/genres';
 import type {
@@ -85,8 +85,14 @@ function numericValue(item: MusicInfoItem | undefined, field: keyof MusicInfoIte
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+/**
+ * Read a flag that some dumps store as a boolean and others as an integer —
+ * `spikeOn*` is `false`/`true` in CHN and `0`/`1`/`2` in JPN. Writing back is
+ * conformed to the row's own type in model/edits.ts.
+ */
 function booleanValue(item: MusicInfoItem | undefined, field: keyof MusicInfoItem): boolean {
-  return item?.[field] === true;
+  const value = item?.[field];
+  return value === true || (typeof value === 'number' && value !== 0);
 }
 
 function BooleanSwitch({
@@ -302,6 +308,8 @@ export function MetadataTab({ row }: { row: SongRow }) {
   const project = useAppStore((s) => s.project);
 
   const baseline: RawDatatables | undefined = project.kind === 'open' ? project.project.baseline : undefined;
+  const gameVersion = project.kind === 'open' ? project.project.root.gameVersion : undefined;
+  const metadataLocales = localesForGameVersion(gameVersion);
   const baseInfo = useMemo(
     () => baseline?.musicinfo.items.find((item) => item.uniqueId === row.uniqueId),
     [baseline, row.uniqueId],
@@ -495,7 +503,7 @@ export function MetadataTab({ row }: { row: SongRow }) {
               <span style={{ flex: 1 }}>{t('metadata.title')}</span>
               <span style={{ flex: 1 }}>{t('metadata.subtitle')}</span>
             </div>
-            {LOCALES.map((locale) => {
+            {metadataLocales.map((locale) => {
               const titleDirty = row.titles.title[locale.value] !== baseTitle(locale.value);
               const subtitleDirty = row.titles.subtitle[locale.value] !== baseSubtitle(locale.value);
               return (

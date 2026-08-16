@@ -28,7 +28,7 @@ function testPcm(samples: number): [Int16Array, Int16Array] {
   ];
 }
 
-describe.skipIf(!HAS_CORPUS || !HAS_G719_ENCODER || !HAS_G719_DECODER)('game-native G.719 sound-bank encoding', () => {
+describe.skipIf(!HAS_G719_ENCODER || !HAS_G719_DECODER)('game-native G.719 sound-bank encoding', () => {
   test('writes the observed stereo BNSF/IS22 frame layout', async () => {
     const stream = await encodeG719Bnsf(testPcm(1_500), await loadTestG719EncoderWasm());
     const bankBytes = createNus3BankFromTemplate(await templateBytes(), {
@@ -96,25 +96,27 @@ describe.skipIf(!HAS_CORPUS || !HAS_G719_ENCODER || !HAS_G719_DECODER)('game-nat
     expect(replaced.length - first.length).toBe(replacement.length - firstStream.length);
   });
 
-  test.each([
-    ['CHN', 'TaikoCHN/Data/x64/sound/song_589him.nus3bank', 'song_589him'],
-    ['JPN', 'JPN39.06/Data/x64/sound/song_armage.nus3bank', 'song_armage'],
-  ])('preserves the real %s bank shape when replacing its stream', async (_region, relative, stem) => {
-    const file = await readFile(resolve(RESOURCES_DIR, relative));
-    const source = new Uint8Array(file.buffer, file.byteOffset, file.byteLength);
-    const before = parseNus3Bank(source);
-    const beforeTone = selectPlayableTone(before, stem)!.tone;
-    const stream = await encodeG719Bnsf(testPcm(960), await loadTestG719EncoderWasm());
-    const replaced = replaceNus3BankStream(source, stream, stem);
-    const after = parseNus3Bank(replaced);
-    const afterTone = selectPlayableTone(after, stem)!.tone;
+  describe.skipIf(!HAS_CORPUS)('real-bank replacements', () => {
+    test.each([
+      ['CHN', 'TaikoCHN/Data/x64/sound/song_589him.nus3bank', 'song_589him'],
+      ['JPN', 'JPN39.06/Data/x64/sound/song_armage.nus3bank', 'song_armage'],
+    ])('preserves the real %s bank shape when replacing its stream', async (_region, relative, stem) => {
+      const file = await readFile(resolve(RESOURCES_DIR, relative));
+      const source = new Uint8Array(file.buffer, file.byteOffset, file.byteLength);
+      const before = parseNus3Bank(source);
+      const beforeTone = selectPlayableTone(before, stem)!.tone;
+      const stream = await encodeG719Bnsf(testPcm(960), await loadTestG719EncoderWasm());
+      const replaced = replaceNus3BankStream(source, stream, stem);
+      const after = parseNus3Bank(replaced);
+      const afterTone = selectPlayableTone(after, stem)!.tone;
 
-    expect(after.warnings).toEqual([]);
-    expect(after.sections.map((section) => section.id)).toEqual(before.sections.map((section) => section.id));
-    expect(afterTone.name).toBe(beforeTone.name);
-    expect(afterTone.demoStartMs).toBe(beforeTone.demoStartMs);
-    expect(afterTone.stream?.metadata).toMatchObject({
-      format: 'BNSF', codec: 'IS22', channels: 2, sampleRate: 48_000,
+      expect(after.warnings).toEqual([]);
+      expect(after.sections.map((section) => section.id)).toEqual(before.sections.map((section) => section.id));
+      expect(afterTone.name).toBe(beforeTone.name);
+      expect(afterTone.demoStartMs).toBe(beforeTone.demoStartMs);
+      expect(afterTone.stream?.metadata).toMatchObject({
+        format: 'BNSF', codec: 'IS22', channels: 2, sampleRate: 48_000,
+      });
     });
   });
 });

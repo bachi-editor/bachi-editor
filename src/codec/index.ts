@@ -11,6 +11,7 @@ export {
   MINIFIED_JSON_STYLE,
   type JsonTextStyle,
 } from './datatable/serde';
+export { detectGameVersion, isGameVersion, type GameVersion } from './datatable/gameVersion';
 export * from './datatable/types';
 export * from './serverdata';
 export * from './fumen/types';
@@ -25,7 +26,7 @@ export {
 } from './fumen/authoring';
 export type { FumenChartDifficulty, SoulGaugeFields } from './fumen/authoring';
 export * from './nus3bank/types';
-export { isNus3BankBytes, parseNus3Bank } from './nus3bank/parse';
+export { isNus3BankBytes, parseNus3Bank, readNus3BankId } from './nus3bank/parse';
 export { extractStreamBytes, selectPlayableTone } from './nus3bank/extract';
 export { patchNus3BankDemoStartMs, readNus3BankDemoStartMs } from './nus3bank/edit';
 export { createNus3BankFromTemplate, replaceNus3BankStream } from './nus3bank/write';

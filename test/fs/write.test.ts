@@ -9,12 +9,12 @@ import { webcrypto } from 'node:crypto';
 import { describe, expect, test } from 'vitest';
 import type { RawDatatables } from '../../src/fs/datatables';
 import type { ProjectRoot } from '../../src/fs/project';
-import { deleteSong } from '../../src/model/edits';
+import { addSong, deleteSong } from '../../src/model/edits';
 import { saveDatatables, sealDatatable } from '../../src/fs/write';
 import { decodeFumen } from '../../src/codec/fumen/decode';
 import { openEnvelope } from '../../src/codec/envelope';
 import { DATATABLE_KEY_HEX, FUMEN_KEY_HEX, HAS_KEYS } from '../helpers/keys';
-import { detectJsonTextStyle, formatJsonText, readNus3BankDemoStartMs, type Fumen } from '../../src/codec';
+import { decodeJsonPayload, detectJsonTextStyle, formatJsonText, readNus3BankDemoStartMs, type Fumen } from '../../src/codec';
 import { CHN_X64, HAS_CORPUS } from '../helpers/resources';
 
 Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
@@ -86,13 +86,44 @@ function baselineTables(): RawDatatables {
     },
     musicOrder: { items: [{ uniqueId: 1, id: 'aaa', genreNo: 0 }, { uniqueId: 2, id: 'bbb', genreNo: 5 }] },
     wordlist: { items: [{ key: 'song_aaa', japaneseText: 'A' }, { key: 'song_sub_aaa', japaneseText: 'sub' }] },
+    musicAttribute: {
+      items: [
+        { uniqueId: 1, id: 'aaa', ensoBgId: 10, dancerId: 20 },
+        { uniqueId: 2, id: 'bbb', ensoBgId: 11, dancerId: 21 },
+      ],
+    },
+    musicUsbSetting: {
+      items: [
+        { uniqueId: 1, id: 'aaa', usbVer: 30 },
+        { uniqueId: 2, id: 'bbb', usbVer: 31 },
+      ],
+    },
+    musicAiSection: {
+      items: [
+        { uniqueId: 1, id: 'aaa', sectionCount: 40 },
+        { uniqueId: 2, id: 'bbb', sectionCount: 41 },
+      ],
+    },
   };
 }
+
+const COMPANION_DATATABLE_FILES = [
+  ['music_attribute.bin', 'musicAttribute'],
+  ['music_usbsetting.bin', 'musicUsbSetting'],
+  ['music_ai_section.bin', 'musicAiSection'],
+] as const;
+
+const DATATABLE_FILES = [
+  ['musicinfo.bin', 'musicinfo'],
+  ['music_order.bin', 'musicOrder'],
+  ['wordlist.bin', 'wordlist'],
+  ...COMPANION_DATATABLE_FILES,
+] as const;
 
 async function seedRoot(base: RawDatatables): Promise<{ root: ProjectRoot; datatable: MemDir; fumen: MemDir; sound: MemDir }> {
   const datatable = new MemDir('datatable');
   // Seed existing datatable bytes so direct-overwrite paths are exercised.
-  for (const [name, key] of [['musicinfo.bin', 'musicinfo'], ['music_order.bin', 'musicOrder'], ['wordlist.bin', 'wordlist']] as const) {
+  for (const [name, key] of DATATABLE_FILES) {
     datatable.children.set(name, new MemFile(name, await sealDatatable(base[key], DATATABLE_KEY_HEX)));
   }
   const fumen = new MemDir('fumen');
@@ -110,8 +141,15 @@ async function seedRoot(base: RawDatatables): Promise<{ root: ProjectRoot; datat
     fumen: fumen as unknown as FileSystemDirectoryHandle,
     sound: sound as unknown as FileSystemDirectoryHandle,
     keys: KEYS,
+    gameVersion: 'chn' as const,
   };
   return { root, datatable, fumen, sound };
+}
+
+async function readDatatable<T>(dir: MemDir, name: string): Promise<T> {
+  const bytes = (dir.children.get(name) as MemFile).bytes;
+  const { payload } = await openEnvelope(bytes, DATATABLE_KEY_HEX);
+  return decodeJsonPayload<T>(payload);
 }
 
 describe('saveDatatables — delete-song asset cleanup', () => {
@@ -122,18 +160,60 @@ describe('saveDatatables — delete-song asset cleanup', () => {
 
     const result = await saveDatatables(root, base, draft);
 
-    // datatables: all three are dirty (musicinfo/order/wordlist lost aaa).
-    expect(result.saved.map((s) => s.file).sort()).toEqual(['music_order.bin', 'musicinfo.bin', 'wordlist.bin']);
+    // All six datatables are dirty: every per-song table lost aaa.
+    expect(result.saved.map((s) => s.file).sort()).toEqual([
+      'music_ai_section.bin',
+      'music_attribute.bin',
+      'music_order.bin',
+      'music_usbsetting.bin',
+      'musicinfo.bin',
+      'wordlist.bin',
+    ]);
+
+    for (const [name, key] of COMPANION_DATATABLE_FILES) {
+      await expect(readDatatable(datatable, name)).resolves.toEqual(draft[key]);
+      expect((draft[key]?.items ?? []).map((row) => row.id)).toEqual(['bbb']);
+    }
 
     // Production assets are gone, with no replacement copies or sidecars.
     expect(fumen.children.has('aaa')).toBe(false);
     expect([...fumen.children.keys()]).toEqual([]);
     expect(sound.children.has('song_aaa.nus3bank')).toBe(false);
     expect([...sound.children.keys()]).toEqual([]);
-    expect([...datatable.children.keys()].sort()).toEqual(['music_order.bin', 'musicinfo.bin', 'wordlist.bin']);
+    expect([...datatable.children.keys()].sort()).toEqual([
+      'music_ai_section.bin',
+      'music_attribute.bin',
+      'music_order.bin',
+      'music_usbsetting.bin',
+      'musicinfo.bin',
+      'wordlist.bin',
+    ]);
 
     // result reports the cleanup.
     expect(result.removedAssets).toEqual([{ songId: 'aaa' }]);
+  });
+
+  test.skipIf(!HAS_KEYS)('writes a new song row to every loaded companion table', async () => {
+    const base = baselineTables();
+    const draft = addSong(base, { uniqueId: 3, id: 'ccc', genreNo: 0, title: 'C' });
+    const { root, datatable } = await seedRoot(base);
+
+    const result = await saveDatatables(root, base, draft);
+
+    expect(result.saved.map((s) => s.file).sort()).toEqual([
+      'music_ai_section.bin',
+      'music_attribute.bin',
+      'music_usbsetting.bin',
+      'musicinfo.bin',
+      'wordlist.bin',
+    ]);
+    for (const [name, key] of COMPANION_DATATABLE_FILES) {
+      const expected = draft[key]!;
+      await expect(readDatatable(datatable, name)).resolves.toEqual(expected);
+      const added = expected.items.find((row) => row.id === 'ccc');
+      expect(added).toMatchObject({ id: 'ccc', uniqueId: 3 });
+      expect(Object.keys(added ?? {})).toEqual(Object.keys(base[key]!.items[0]));
+    }
   });
 
   test.skipIf(!HAS_CORPUS)('writes edited charts in place and reports savedFumens', async () => {

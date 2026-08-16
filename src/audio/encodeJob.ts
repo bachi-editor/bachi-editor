@@ -12,6 +12,7 @@ export interface EncodeJobInput extends DecodedAudioData {
   preferredStem: string;
   songId: string;
   uniqueId: number;
+  bankId?: number;
   demoStartMs: number;
 }
 
@@ -31,6 +32,7 @@ export async function runEncodeJob(input: EncodeJobInput): Promise<EncodeJobResu
     bankBytes = createNus3BankFromTemplate(input.templateBank, {
       songId: input.songId,
       uniqueId: input.uniqueId,
+      bankId: input.bankId,
       demoStartMs: input.demoStartMs,
       streamBytes: stream,
     });

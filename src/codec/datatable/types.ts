@@ -62,12 +62,20 @@ export interface MusicInfoItem {
   fuusenTotalHard?: number;
   fuusenTotalMania?: number;
   fuusenTotalUra?: number;
-  /** Current CHN-only special-chart flags. This family spells Oni explicitly. */
-  spikeOnEasy?: boolean;
-  spikeOnNormal?: boolean;
-  spikeOnHard?: boolean;
-  spikeOnOni?: boolean;
-  spikeOnUra?: boolean;
+  /**
+   * Special-chart flags. This family spells Oni explicitly.
+   *
+   * The stored JSON type differs by dump and must be preserved on write: CHN
+   * v12r00_cn uses booleans (`false` ×5,208, `true` ×2), JPN 39.06 uses
+   * integers (`0` ×5,164, `1` ×4, `2` ×2). New rows take the shape of the file
+   * they are written into (`model/datatableShape.ts`), and edits are conformed
+   * to the row's existing type rather than forced to boolean.
+   */
+  spikeOnEasy?: boolean | number;
+  spikeOnNormal?: boolean | number;
+  spikeOnHard?: boolean | number;
+  spikeOnOni?: boolean | number;
+  spikeOnUra?: boolean | number;
   [extra: string]: unknown;
 }
 
@@ -144,6 +152,32 @@ export interface WordListItem {
 
 export interface WordListFile {
   items: WordListItem[];
+  [extra: string]: unknown;
+}
+
+/**
+ * A per-song row in one of the companion tables that sit beside musicinfo.
+ *
+ * `music_attribute.bin`, `music_usbsetting.bin` and `music_ai_section.bin` are
+ * keyed the same way musicinfo is and, in both shipped dumps, hold exactly one
+ * row per musicinfo song — 1,034 of 1,034 in JPN 39.06, with no extras. The
+ * editor does not expose their fields, but it must keep the row *set* in step:
+ * a song present in musicinfo and absent here has no enso background, no AI
+ * section data and no USB setting, which is what the game resolves at the
+ * moment a chart starts.
+ *
+ * Their remaining fields are intentionally untyped. Nothing in the editor reads
+ * them, and typing them would invite exactly the CHN-shaped literals that the
+ * scaffold-from-the-file rule exists to avoid.
+ */
+export interface CompanionSongItem {
+  id: string;
+  uniqueId: number;
+  [extra: string]: unknown;
+}
+
+export interface CompanionSongFile {
+  items: CompanionSongItem[];
   [extra: string]: unknown;
 }
 

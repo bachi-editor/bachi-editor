@@ -23,6 +23,23 @@ Generated from `resources/TaikoCHN/Data/x64/sound/*.nus3bank` on 2026-08-07.
   `{ u32le recordOffset, u32le recordSize }`, relative to the TONE payload start.
 - The normal CHN tone record stores a length-prefixed NUL-terminated name at record offset `0x0c`.
   The stream descriptor starts at `0x0c + align4(1 + nameLength)`.
+- **The declared length counts the NUL.** `song_10jiku` (11 characters) is stored as
+  `0x0c` followed by 11 bytes and a `0x00`. This holds for all 1,120 CHN and all
+  1,120 JPN 39.06 shipped song banks, in both `BINF` and `TONE`, and for the bundled
+  template. It is load-bearing, not cosmetic: `Taiko.exe`'s bank loader reads the
+  `BINF` name with `memcpy(malloc(len + 1), nameBytes, len + 1)`, so a length of
+  `strlen` copies one byte *past* the string and yields an unterminated name with a
+  stray trailing byte. Because the name area is `align4(1 + declaredLength)`, a
+  `strlen` prefix also leaves no padding at all whenever `strlen % 4 == 3` — which is
+  every six-character song id, the corpus norm. Confirmed on hardware: banks written
+  with the short prefix have no song-select preview and hang the game at chart start;
+  banks whose id length happened to leave padding played normally.
+- The `u32` after the `BINF` name is a **per-bank id, not the Song No.** Across the
+  1,203 JPN 39.06 banks it spans 0..3,404 and is effectively unique per bank; it
+  matches `musicinfo.uniqueId` on none of the 1,120 song banks. The game loads it into
+  its bank record. `createNus3BankFromTemplate` therefore takes an explicit `bankId`
+  (defaulting to the Song No. for direct callers), while the editor allocates an
+  id after the highest BINF id already present in the open project's sound banks.
 - The referenced `PACK` byte range is read from descriptor offsets `+0x08` and `+0x0c`:
   `{ u32le packOffset, u32le packSize }`.
 - Song-select demo start (`TJA` `DEMOSTART`) is stored in the TONE record, not in

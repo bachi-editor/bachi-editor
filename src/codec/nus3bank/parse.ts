@@ -356,6 +356,59 @@ export function isNus3BankBytes(bytes: Uint8Array): boolean {
   return bytes.length >= 4 && ascii(bytes, 0, 4) === 'NUS3';
 }
 
+/**
+ * Read the per-bank id stored after the BINF name.
+ *
+ * This deliberately needs only the file prefix through BINF, not the PACK
+ * payload, so callers can census a sound directory without reading every
+ * embedded audio stream.
+ */
+export function readNus3BankId(bytes: Uint8Array): number {
+  const reader = new Reader(bytes);
+  reader.require(0, 24, 'NUS3 header');
+  if (reader.ascii(0, 4, 'NUS3 magic') !== 'NUS3') {
+    throw new Nus3ParseError('Expected NUS3 magic');
+  }
+  if (reader.ascii(8, 8, 'BANKTOC magic') !== 'BANKTOC ') {
+    throw new Nus3ParseError('Expected BANKTOC section');
+  }
+  const tocSize = reader.u32le(16, 'BANKTOC size');
+  const sectionCount = reader.u32le(20, 'BANKTOC section count');
+  reader.require(20, tocSize, 'BANKTOC payload');
+  if (4 + sectionCount * 8 > tocSize) {
+    throw new Nus3ParseError(`BANKTOC table too small for ${sectionCount} section(s)`);
+  }
+
+  let sectionOffset = 20 + tocSize;
+  for (let index = 0; index < sectionCount; index++) {
+    const entryOffset = 24 + index * 8;
+    const id = reader.ascii(entryOffset, 4, `BANKTOC entry ${index} id`);
+    const size = reader.u32le(entryOffset + 4, `BANKTOC entry ${index} size`);
+    if (id !== 'BINF') {
+      sectionOffset += 8 + size;
+      continue;
+    }
+
+    reader.require(sectionOffset, 8, 'BINF section header');
+    if (reader.ascii(sectionOffset, 4, 'BINF section id') !== 'BINF') {
+      throw new Nus3ParseError('BANKTOC BINF entry does not match its section');
+    }
+    const actualSize = reader.u32le(sectionOffset + 4, 'BINF section size');
+    if (actualSize !== size) {
+      throw new Nus3ParseError(`BANKTOC BINF size ${size}, section has ${actualSize}`);
+    }
+    const dataOffset = sectionOffset + 8;
+    const nameOffset = dataOffset + 8;
+    const declaredLength = reader.u8(nameOffset, 'BINF name length');
+    const bankIdOffset = nameOffset + align4(1 + declaredLength);
+    if (bankIdOffset + 4 > dataOffset + size) {
+      throw new Nus3ParseError('BINF name leaves no room for its bank id');
+    }
+    return reader.u32le(bankIdOffset, 'BINF bank id');
+  }
+  throw new Nus3ParseError('The nus3bank has no BINF section');
+}
+
 export function parseNus3Bank(bytes: Uint8Array): Nus3Bank {
   const reader = new Reader(bytes);
   reader.require(0, 24, 'NUS3 header');

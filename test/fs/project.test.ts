@@ -1,14 +1,41 @@
+import { webcrypto } from 'node:crypto';
 import { afterEach, describe, expect, test, vi } from 'vitest';
+import { encodeJsonPayload, sealEnvelope, type MusicInfoFile } from '../../src/codec';
 import {
+  openProjectWithKeys,
   pickProject,
   queryRead,
   requestReadWrite,
+  type ProjectDirectories,
+  type ProjectKeys,
+  type ProjectRoot,
   validateProjectHandle,
 } from '../../src/fs/project';
 
+if (!globalThis.crypto) {
+  Object.defineProperty(globalThis, 'crypto', { value: webcrypto });
+}
+
+class MemFile {
+  readonly kind = 'file' as const;
+  reads = 0;
+
+  constructor(readonly name: string, private readonly bytes: Uint8Array) {}
+
+  async getFile() {
+    const bytes = this.bytes;
+    return {
+      arrayBuffer: async () => {
+        this.reads += 1;
+        return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+      },
+    };
+  }
+}
+
 class MemDir {
   readonly kind = 'directory' as const;
-  readonly children = new Map<string, MemDir>();
+  readonly children = new Map<string, MemDir | MemFile>();
 
   constructor(readonly name: string) {}
 
@@ -18,10 +45,28 @@ class MemDir {
     return dir;
   }
 
+  addFile(name: string, bytes: Uint8Array): MemFile {
+    const file = new MemFile(name, bytes);
+    this.children.set(name, file);
+    return file;
+  }
+
   async getDirectoryHandle(name: string): Promise<MemDir> {
-    const dir = this.children.get(name);
-    if (!dir) throw new DOMException(`no dir ${name}`, 'NotFoundError');
-    return dir;
+    const entry = this.children.get(name);
+    if (!entry) throw new DOMException(`no dir ${name}`, 'NotFoundError');
+    if (entry.kind !== 'directory') throw new DOMException(`${name} is a file`, 'TypeMismatchError');
+    return entry;
+  }
+
+  async getFileHandle(name: string): Promise<MemFile> {
+    const entry = this.children.get(name);
+    if (!entry) throw new DOMException(`no file ${name}`, 'NotFoundError');
+    if (entry.kind !== 'file') throw new DOMException(`${name} is a directory`, 'TypeMismatchError');
+    return entry;
+  }
+
+  async *[Symbol.asyncIterator](): AsyncGenerator<[string, MemDir | MemFile]> {
+    for (const entry of this.children) yield entry;
   }
 }
 
@@ -29,6 +74,20 @@ function addRequiredChildren(dir: MemDir): void {
   dir.add('datatable');
   dir.add('fumen');
   dir.add('sound');
+}
+
+const PROJECT_KEYS: ProjectKeys = {
+  datatable: '11'.repeat(32),
+  fumen: '22'.repeat(32),
+};
+
+async function openFixture(musicinfo: MusicInfoFile): Promise<{ root: MemDir; musicinfoFile: MemFile }> {
+  const root = new MemDir('x64');
+  const datatable = root.add('datatable');
+  root.add('fumen');
+  root.add('sound');
+  const bytes = await sealEnvelope(encodeJsonPayload(musicinfo), PROJECT_KEYS.datatable);
+  return { root, musicinfoFile: datatable.addFile('musicinfo.bin', bytes) };
 }
 
 afterEach(() => {
@@ -44,6 +103,8 @@ describe('project root validation', () => {
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('expected project validation to pass');
+    const discovered: ProjectDirectories = result.root;
+    expect(discovered).not.toHaveProperty('gameVersion');
     expect(result.root.handle).toBe(x64);
     expect(result.root.datatable).toBe(x64.children.get('datatable'));
     expect(result.root.fumen).toBe(x64.children.get('fumen'));
@@ -124,6 +185,61 @@ describe('project permissions', () => {
 
     await expect(requestReadWrite(handle)).resolves.toBe('granted');
     expect(requestPermission).toHaveBeenCalledWith({ mode: 'readwrite' });
+  });
+});
+
+describe('openProjectWithKeys game version', () => {
+  test('opens a matching project, carries the selection, and decodes musicinfo once', async () => {
+    const { root, musicinfoFile } = await openFixture({
+      items: [{ uniqueId: 1, id: 'a', spikeOnEasy: false, spikeOnOni: true }],
+    });
+
+    const result = await openProjectWithKeys(
+      root as unknown as FileSystemDirectoryHandle,
+      PROJECT_KEYS,
+      'chn',
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected project open to pass');
+    const opened: ProjectRoot = result.root;
+    expect(opened.gameVersion).toBe('chn');
+    expect(result.root.keys).toEqual(PROJECT_KEYS);
+    expect(musicinfoFile.reads).toBe(1);
+  });
+
+  test('rejects a clear selected/detected mismatch with a field-specific error', async () => {
+    const { root, musicinfoFile } = await openFixture({
+      items: [{ uniqueId: 1, id: 'a', spikeOnEasy: 0, spikeOnOni: 2 }],
+    });
+
+    const result = await openProjectWithKeys(
+      root as unknown as FileSystemDirectoryHandle,
+      PROJECT_KEYS,
+      'chn',
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      error: { field: 'gameVersion', selected: 'chn', detected: 'jpn' },
+    });
+    expect(musicinfoFile.reads).toBe(1);
+  });
+
+  test('accepts the explicit selection when detection is tied', async () => {
+    const { root } = await openFixture({
+      items: [{ uniqueId: 1, id: 'a', spikeOnEasy: false, spikeOnOni: 0 }],
+    });
+
+    const result = await openProjectWithKeys(
+      root as unknown as FileSystemDirectoryHandle,
+      PROJECT_KEYS,
+      'jpn',
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected ambiguous project to use the selection');
+    expect(result.root.gameVersion).toBe('jpn');
   });
 });
 
