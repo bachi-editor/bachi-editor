@@ -3,14 +3,16 @@
 // The datatables are not one schema. The CHN v12r00_cn and JPN 39.06 dumps
 // disagree on field sets, field types, and key order, and a row scaffolded from
 // hardcoded literals is only ever correct for the dump those literals were
-// copied from. Three real divergences found in JPN 39.06:
+// copied from. Real divergences found across the two dumps:
 //
-//   musicinfo    spikeOn*      CHN: boolean (false/true)
-//                              JPN: number  (0 ×5164, 1 ×4, 2 ×2)
-//   music_order  closeDispType CHN + JPN both have it; a scaffold that omits it
-//                              leaves the game reading a missing key
-//   wordlist     locales       CHN: 4 + chineseSText, each with a *FontType
-//                              JPN: 4, each with a *FontType, no chineseS
+//   musicinfo        spikeOn*        CHN: boolean (false/true)
+//                                    JPN: number  (0 ×5164, 1 ×4, 2 ×2)
+//   music_order      closeDispType   CHN + JPN both have it; a scaffold that omits it
+//                                    leaves the game reading a missing key
+//   wordlist         locales         CHN: 4 + chineseSText, each with a *FontType
+//                                    JPN: 4, each with a *FontType, no chineseS
+//   music_attribute  isNotCopyright  CHN: boolean field present
+//                                    JPN: field absent entirely
 //
 // So instead of writing literals, copy the shape of the rows that are already
 // in the file: same keys, same key order, same JSON types, with identity fields
