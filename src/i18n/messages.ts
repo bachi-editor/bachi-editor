@@ -236,16 +236,16 @@ export const messages = {
     'zh-Hant': 'CHN 版和 JPN 版的部分欄位格式不同，因此必須選擇。請選擇產生此 Data 資料夾的遊戲版本。',
   },
   'setup.gameVersion.chn': {
-    en: 'China version (CHN)',
-    ja: '中国版（CHN）',
-    'zh-Hans': '中国版（CHN）',
-    'zh-Hant': '中國版（CHN）',
+    en: 'CHN 00.32',
+    ja: 'CHN 00.32',
+    'zh-Hans': 'CHN 00.32',
+    'zh-Hant': 'CHN 00.32',
   },
   'setup.gameVersion.jpn': {
-    en: 'Japan version (JPN)',
-    ja: '日本版（JPN）',
-    'zh-Hans': '日本版（JPN）',
-    'zh-Hant': '日本版（JPN）',
+    en: 'JPN 39.06',
+    ja: 'JPN 39.06',
+    'zh-Hans': 'JPN 39.06',
+    'zh-Hant': 'JPN 39.06',
   },
 
   'setup.step2.datatableKey': {
