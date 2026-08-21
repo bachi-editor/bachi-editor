@@ -236,16 +236,16 @@ export const messages = {
     'zh-Hant': 'CHN 版和 JPN 版的部分欄位格式不同，因此必須選擇。請選擇產生此 Data 資料夾的遊戲版本。',
   },
   'setup.gameVersion.chn': {
-    en: 'China version (CHN)',
-    ja: '中国版（CHN）',
-    'zh-Hans': '中国版（CHN）',
-    'zh-Hant': '中國版（CHN）',
+    en: 'CHN 00.32',
+    ja: 'CHN 00.32',
+    'zh-Hans': 'CHN 00.32',
+    'zh-Hant': 'CHN 00.32',
   },
   'setup.gameVersion.jpn': {
-    en: 'Japan version (JPN)',
-    ja: '日本版（JPN）',
-    'zh-Hans': '日本版（JPN）',
-    'zh-Hant': '日本版（JPN）',
+    en: 'JPN 39.06',
+    ja: 'JPN 39.06',
+    'zh-Hans': 'JPN 39.06',
+    'zh-Hant': 'JPN 39.06',
   },
 
   'setup.step2.datatableKey': {
@@ -1111,6 +1111,22 @@ export const messages = {
   'about.changelogTitle': {
     en: 'Latest changes', ja: '最新の変更',
     'zh-Hans': '最新变更', 'zh-Hant': '最新變更',
+  },
+  'about.release.0_0_6.title': {
+    en: 'Clearer version and note labels', ja: 'バージョン表記とノーツラベルの改善',
+    'zh-Hans': '更清晰的版本与音符标注', 'zh-Hant': '更清晰的版本與音符標注',
+  },
+  'about.release.0_0_6.versionLabels': {
+    en: 'The game version picker now shows each region as country code plus version — CHN 00.32 and JPN 39.06 — instead of the long localized names.',
+    ja: 'ゲームバージョンの選択肢が、長いローカライズ名ではなく「CHN 00.32」「JPN 39.06」のように国コードとバージョンで表示されるようになりました。',
+    'zh-Hans': '游戏版本选项现在以国家代码加版本号（CHN 00.32、JPN 39.06）显示，不再使用冗长的本地化名称。',
+    'zh-Hant': '遊戲版本選項現在以國家代碼加版本號（CHN 00.32、JPN 39.06）顯示，不再使用冗長的本地化名稱。',
+  },
+  'about.release.0_0_6.noteLabels': {
+    en: 'Note labels on the chart are drawn 30% smaller so they crowd the note heads less.',
+    ja: '譜面上のノーツラベルを 30% 小さく描画し、ノートヘッドへの被りを抑えました。',
+    'zh-Hans': '谱面上的音符标注缩小 30% 绘制，减少对音符头的遮挡。',
+    'zh-Hant': '譜面上的音符標注縮小 30% 繪製，減少對音符頭的遮擋。',
   },
   'about.release.0_0_5.title': {
     en: 'Regional data and server exports', ja: '地域別データとサーバーエクスポート',
